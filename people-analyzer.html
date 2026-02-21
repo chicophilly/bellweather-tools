@@ -1,0 +1,2576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bellweather – People Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #282828;
+    --navy-light: #363636;
+    --slate: #3d4f6f;
+    --steel: #6b7d9e;
+    --silver: #a8b5cc;
+    --cloud: #dde3ed;
+    --snow: #f4f6f9;
+    --white: #ffffff;
+    --gold: #c8953e;
+    --gold-light: #f5e6cc;
+    --gold-dim: rgba(200,149,62,0.12);
+    --green: #2d8a5e;
+    --green-bg: #e8f5ee;
+    --amber: #c17a2a;
+    --amber-bg: #fdf3e4;
+    --red: #b94444;
+    --red-bg: #fce8e8;
+    --pink-admin: #fff0f3;
+    --pink-admin-border: #e8a0b0;
+    --dept-sales: #2a7fb5;
+    --dept-design: #7b5ea7;
+    --dept-production: #c17a2a;
+    --dept-operations: #2d8a5e;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(26,39,68,0.08), 0 4px 12px rgba(26,39,68,0.05);
+    --shadow-lg: 0 4px 12px rgba(26,39,68,0.1), 0 12px 32px rgba(26,39,68,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--snow);
+    color: var(--navy);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--navy);
+    color: var(--white);
+    padding: 0 32px;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; padding: 12px 0; }
+  .header-logo {
+    height: 44px;
+    object-fit: contain;
+  }
+  .header-divider {
+    width: 1px;
+    height: 28px;
+    background: rgba(255,255,255,0.2);
+  }
+  .header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 400;
+    letter-spacing: 1.5px;
+    color: var(--white);
+    margin: 0;
+    line-height: 1.1;
+  }
+  .header h1 span {
+    font-style: italic;
+    font-weight: 300;
+  }
+  .header-subtitle {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--silver);
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    margin-top: 2px;
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+  }
+  .tab {
+    padding: 20px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--silver);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.2px;
+  }
+  .tab:hover { color: var(--white); background: rgba(255,255,255,0.05); }
+  .tab.active { color: var(--gold); border-bottom-color: var(--gold); background: rgba(200,149,62,0.08); }
+
+  /* ── Layout ── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--navy);
+  }
+
+  /* ── Form Elements ── */
+  label.field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--slate);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 6px;
+  }
+
+  input[type="text"], select {
+    width: 100%;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    border: 1.5px solid var(--cloud);
+    border-radius: var(--radius);
+    background: var(--white);
+    color: var(--navy);
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  input[type="text"]:focus, select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-dim);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .form-group { display: flex; flex-direction: column; }
+
+  /* ── Rating Controls ── */
+  .eval-section { margin-bottom: 28px; }
+  .eval-section:last-child { margin-bottom: 0; }
+  .eval-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--steel);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--cloud);
+  }
+
+  .eval-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--snow);
+    flex-wrap: wrap;
+  }
+  .eval-row:last-child { border-bottom: none; }
+  .eval-comment {
+    width: 100%;
+    margin-top: 4px;
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid var(--cloud);
+    border-radius: 4px;
+    color: var(--slate);
+    background: var(--snow);
+    transition: border-color 0.15s;
+  }
+  .eval-comment:focus { border-color: var(--gold); outline: none; background: #fff; }
+  .eval-comment::placeholder { color: var(--silver); font-style: italic; }
+
+  .eval-label {
+    font-size: 14px;
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+  }
+  .eval-label .descriptors {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--steel);
+    margin-top: 2px;
+    line-height: 1.45;
+  }
+
+  .rating-group {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-left: 20px;
+  }
+  .rating-btn {
+    width: 44px;
+    height: 36px;
+    border: 1.5px solid var(--cloud);
+    border-radius: 6px;
+    background: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--steel);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .rating-btn:hover { border-color: var(--silver); background: var(--snow); }
+  .rating-btn.selected-plus { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+  .rating-btn.selected-plusminus { background: var(--amber-bg); border-color: var(--amber); color: var(--amber); }
+  .rating-btn.selected-minus { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+  .rating-btn.selected-yes { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+  .rating-btn.selected-no { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+
+  /* ── Buttons ── */
+  .btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 22px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary {
+    background: var(--gold);
+    color: var(--white);
+  }
+  .btn-primary:hover { background: #b5862e; }
+  .btn-secondary {
+    background: var(--snow);
+    color: var(--slate);
+    border: 1.5px solid var(--cloud);
+  }
+  .btn-secondary:hover { background: var(--cloud); }
+  .btn-sm { padding: 6px 14px; font-size: 13px; }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+
+  /* ── Summary Table ── */
+  .dept-group { margin-bottom: 28px; }
+  .dept-header {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 0;
+    padding: 10px 16px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .summary-table thead th {
+    background: var(--navy);
+    color: var(--cloud);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 10px;
+    text-align: center;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+  }
+  .summary-table thead th:first-child { text-align: left; border-radius: var(--radius) 0 0 0; }
+  .summary-table thead th:last-child { border-radius: 0 var(--radius) 0 0; }
+
+  .summary-table tbody td {
+    padding: 10px 10px;
+    text-align: center;
+    border-bottom: 1px solid var(--cloud);
+    font-weight: 500;
+  }
+  .summary-table tbody td:first-child {
+    text-align: left;
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .summary-table tbody tr:hover { background: var(--snow); }
+
+  .chip {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 32px;
+  }
+  .chip-plus { background: var(--green-bg); color: var(--green); }
+  .chip-plusminus { background: var(--amber-bg); color: var(--amber); }
+  .chip-minus { background: var(--red-bg); color: var(--red); }
+  .chip-yes { background: var(--green-bg); color: var(--green); }
+  .chip-no { background: var(--red-bg); color: var(--red); }
+  .chip-none { background: var(--snow); color: var(--silver); }
+
+  .eval-count {
+    font-size: 11px;
+    color: var(--steel);
+    font-weight: 400;
+  }
+
+  .status-bar {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .status-right { background: var(--green-bg); color: var(--green); }
+  .status-watch { background: var(--amber-bg); color: var(--amber); }
+  .status-issue { background: var(--red-bg); color: var(--red); }
+
+  /* ── Detail Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,39,68,0.45);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    width: 90%;
+    max-width: 680px;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 28px;
+  }
+  .modal-title {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .modal-subtitle {
+    font-size: 13px;
+    color: var(--steel);
+    margin-bottom: 20px;
+  }
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: var(--steel);
+    cursor: pointer;
+  }
+  .modal-section { margin-bottom: 20px; }
+  .modal-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--steel);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--cloud);
+  }
+  .detail-grid-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -4px;
+    padding: 0 4px;
+  }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 140px repeat(var(--eval-count, 5), minmax(100px, 1fr));
+    gap: 0;
+    font-size: 13px;
+    min-width: fit-content;
+  }
+  .detail-grid .dg-header {
+    font-weight: 600;
+    color: var(--steel);
+    font-size: 11px;
+    text-transform: uppercase;
+    padding: 6px 8px;
+    background: var(--snow);
+    border-bottom: 1px solid var(--cloud);
+  }
+  .detail-grid .dg-cell {
+    padding: 8px;
+    text-align: center;
+    border-bottom: 1px solid var(--snow);
+  }
+  .detail-grid .dg-label {
+    padding: 8px;
+    font-weight: 500;
+    border-bottom: 1px solid var(--snow);
+    text-align: left;
+  }
+
+  /* ── Trajectory Grid ── */
+  .trajectory-section {
+    margin-bottom: 20px;
+    border: 1px solid var(--cloud);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .trajectory-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    background: var(--snow);
+    border-bottom: 1px solid var(--cloud);
+  }
+  .trajectory-header .trajectory-title {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .trajectory-body { padding: 12px 16px; }
+  .trajectory-grid-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .trajectory-grid {
+    display: grid;
+    grid-template-columns: 140px repeat(var(--session-count, 3), minmax(90px, 1fr));
+    gap: 0;
+    font-size: 13px;
+    min-width: fit-content;
+  }
+  .trajectory-grid .tg-header {
+    font-weight: 600;
+    color: var(--steel);
+    font-size: 11px;
+    text-transform: uppercase;
+    padding: 6px 8px;
+    text-align: center;
+    background: var(--snow);
+    border-bottom: 1px solid var(--cloud);
+  }
+  .trajectory-grid .tg-label {
+    padding: 6px 8px;
+    font-weight: 500;
+    border-bottom: 1px solid var(--snow);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .trajectory-grid .tg-cell {
+    padding: 6px 8px;
+    text-align: center;
+    border-bottom: 1px solid var(--snow);
+  }
+  .trajectory-grid .tg-divider {
+    grid-column: 1 / -1;
+    height: 1px;
+    background: var(--cloud);
+    margin: 2px 0;
+  }
+
+  /* ── Session Block ── */
+  .session-block {
+    border: 1px solid var(--cloud);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .session-block-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, rgba(200,149,62,0.08), rgba(26,39,68,0.04));
+    border-bottom: 1px solid rgba(200,149,62,0.15);
+    font-size: 13px;
+  }
+  .session-block-header .session-name {
+    font-weight: 600;
+    color: var(--navy);
+    font-size: 14px;
+  }
+  .session-block-body { padding: 16px; }
+  .session-block-export {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--cloud);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    margin-bottom: 12px;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--navy);
+    color: var(--white);
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 300;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── Department Chips ── */
+  .dept-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .dept-chip-sales { background: rgba(42,127,181,0.12); color: var(--dept-sales); }
+  .dept-chip-design { background: rgba(123,94,167,0.12); color: var(--dept-design); }
+  .dept-chip-production { background: rgba(193,122,42,0.12); color: var(--dept-production); }
+  .dept-chip-operations { background: rgba(45,138,94,0.12); color: var(--dept-operations); }
+
+  .dept-header-sales { background: var(--dept-sales); }
+  .dept-header-design { background: var(--dept-design); }
+  .dept-header-production { background: var(--dept-production); }
+  .dept-header-operations { background: var(--dept-operations); }
+
+  /* ── Admin Active State ── */
+  .card.admin-active {
+    background: var(--pink-admin);
+    border: 1.5px solid var(--pink-admin-border);
+  }
+
+  /* ── Toggle Switch ── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--cloud);
+    margin-top: 16px;
+  }
+  .toggle-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--slate);
+  }
+  .toggle-hint {
+    font-size: 12px;
+    color: var(--silver);
+    margin-left: 4px;
+  }
+  .toggle {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--cloud);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    background: var(--white);
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    transition: transform 0.2s;
+  }
+  .toggle input:checked + .toggle-track {
+    background: var(--red);
+  }
+  .toggle-green input:checked + .toggle-track {
+    background: var(--green);
+  }
+  .toggle input:checked + .toggle-track::after {
+    transform: translateX(18px);
+  }
+
+  /* ── Delete Button ── */
+  .delete-btn {
+    background: none;
+    border: none;
+    color: var(--red);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.15s;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .admin-mode .delete-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .delete-btn:hover {
+    color: var(--red);
+    background: var(--red-bg);
+  }
+
+  /* ── Admin Slide Panel ── */
+  .admin-panel-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26,39,68,0.3);
+    z-index: 1000;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .admin-panel-overlay.open {
+    display: block;
+    opacity: 1;
+  }
+  .admin-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 400px;
+    max-width: 90vw;
+    height: 100vh;
+    background: var(--white);
+    box-shadow: -4px 0 24px rgba(26,39,68,0.15);
+    z-index: 1001;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+  }
+  .admin-panel.open {
+    transform: translateX(0);
+  }
+  .admin-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--cloud);
+    background: var(--pink-admin);
+  }
+  .admin-panel-header .card-title {
+    margin-bottom: 0;
+    font-size: 18px;
+  }
+  .admin-panel-close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: var(--steel);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    line-height: 1;
+  }
+  .admin-panel-close:hover { color: var(--navy); background: var(--cloud); }
+  .admin-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+  }
+  .admin-section {
+    margin-bottom: 28px;
+  }
+  .admin-section-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--steel);
+    margin-bottom: 12px;
+  }
+  /* ── Filter Buttons ── */
+  .filter-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1.5px solid var(--cloud);
+    background: var(--white);
+    color: var(--steel);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: var(--silver); color: var(--slate); }
+  .filter-btn.active {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: var(--white);
+  }
+  .filter-btn[data-filter="Operations"].active { background: var(--dept-operations); border-color: var(--dept-operations); color: var(--white); }
+  .filter-btn[data-filter="Sales"].active { background: var(--dept-sales); border-color: var(--dept-sales); color: var(--white); }
+  .filter-btn[data-filter="Design"].active { background: var(--dept-design); border-color: var(--dept-design); color: var(--white); }
+  .filter-btn[data-filter="Production"].active { background: var(--dept-production); border-color: var(--dept-production); color: var(--white); }
+  .filter-btn[data-filter="Operations"] { color: var(--dept-operations); border-color: rgba(45,138,94,0.35); }
+  .filter-btn[data-filter="Sales"] { color: var(--dept-sales); border-color: rgba(42,127,181,0.35); }
+  .filter-btn[data-filter="Design"] { color: var(--dept-design); border-color: rgba(123,94,167,0.35); }
+  .filter-btn[data-filter="Production"] { color: var(--dept-production); border-color: rgba(193,122,42,0.35); }
+
+  /* ── Empty State ── */
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--steel);
+  }
+  .empty-state p { font-size: 15px; margin-bottom: 8px; }
+  .empty-state .hint { font-size: 13px; color: var(--silver); }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .form-row { grid-template-columns: 1fr; }
+    .header { padding: 16px 18px; }
+    .container { padding: 18px 12px; }
+    .eval-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .rating-group { margin-left: 0; }
+    .summary-table { font-size: 12px; }
+    .summary-table thead th, .summary-table tbody td { padding: 8px 6px; }
+  }
+</style>
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+</head>
+<body>
+
+<!-- Login Overlay -->
+<div id="loginOverlay" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:var(--snow);z-index:9999;">
+  <div style="text-align:center;max-width:400px;padding:40px;">
+    <div style="margin-bottom:24px;font-family:'Fraunces',serif;font-size:28px;color:var(--navy);">People Analyzer</div>
+    <p style="color:var(--steel);margin-bottom:24px;font-size:14px;">Sign in with your Bellweather Microsoft account to connect to SharePoint.</p>
+    <button onclick="login()" class="btn btn-primary" style="font-size:15px;padding:12px 32px;">Sign in with Microsoft</button>
+    <div id="loginError" style="color:var(--red);margin-top:16px;font-size:13px;display:none;"></div>
+    <div style="margin-top:32px;border-top:1px solid var(--cloud);padding-top:16px;">
+      <button onclick="skipLogin()" class="btn btn-secondary" style="font-size:12px;opacity:0.7;">Use offline (no SharePoint)</button>
+      <p style="color:var(--silver);font-size:11.5px;margin-top:10px;line-height:1.5;max-width:320px;margin-left:auto;margin-right:auto;">Offline mode lets you explore the tool and run evaluations. You can download results as Excel, but data won't be saved for later access.</p>
+    </div>
+  </div>
+</div>
+
+<div id="appContainer" style="display:none;">
+
+<div class="header">
+  <div class="header-left">
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div style="display:flex;flex-direction:column;align-items:flex-start;">
+        <img class="header-logo" src="data:image/png;base64,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" alt="Bellweather">
+    <div class="header-subtitle">People Analyzer</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-left:8px;padding-left:16px;border-left:1px solid rgba(255,255,255,0.15);">
+        <label class="toggle" style="transform:scale(0.9);">
+          <input type="checkbox" id="adminPanelToggle" onchange="toggleAdminPanel()">
+          <span class="toggle-track"></span>
+        </label>
+        <span style="font-size:20px;cursor:pointer;opacity:0.8;" onclick="document.getElementById('adminPanelToggle').click()">⚙️</span>
+      </div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-view="evaluate" onclick="switchView('evaluate')">Evaluate</div>
+    <div class="tab" data-view="summary" onclick="switchView('summary')">Summaries</div>
+    <div id="connStatus" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--silver);padding-right:4px;">
+      <span id="connDot" style="width:8px;height:8px;border-radius:50%;background:var(--silver);"></span>
+      <span id="connLabel">Offline</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ═══ EVALUATE VIEW ═══ -->
+  <div id="view-evaluate" class="view active">
+
+    <!-- Guidance -->
+    <div style="background:linear-gradient(135deg, rgba(200,149,62,0.06), rgba(26,39,68,0.04));border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;border:1px solid rgba(200,149,62,0.12);">
+      <div style="font-size:13px;color:var(--slate);line-height:1.6;">
+        Rate each team member on Bellweather's <strong>five Core Values</strong> (Disciplined, Humbly Confident, Always Improving, Forward-Looking, Cares &amp; Connects) and <strong>GWC</strong> — whether they <em>Get it</em>, <em>Want it</em>, and have the <em>Capacity</em> to do it. Multiple evaluators submit independently; the tool calculates consensus for each person.
+      </div>
+    </div>
+
+    <!-- Evaluate: Evaluator + Team Member Selection -->
+    <div class="card">
+      <div class="card-title">Evaluate</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label" for="evaluatorName">Your Name (Evaluator)</label>
+          <input type="text" id="evaluatorName" placeholder="Enter your name">
+        </div>
+        <div class="form-group">
+          <label class="field-label" for="sessionSelect">Session</label>
+          <select id="sessionSelect">
+            <option value="">Select a session…</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label" for="employeeSelect">Team Member</label>
+          <select id="employeeSelect" onchange="handleEmployeeSelect()">
+            <option value="">Select a team member…</option>
+          </select>
+        </div>
+        <div class="form-group"></div>
+      </div>
+    </div>
+
+    <!-- Evaluation Form -->
+    <div id="evalFormContainer" style="display:none;">
+      <div class="card">
+        <div class="card-title" id="evalFormTitle">Evaluating: —</div>
+
+        <!-- Core Values -->
+        <div class="eval-section">
+          <div class="eval-section-title">Core Values</div>
+          <div style="font-size:11.5px;color:var(--steel);margin-bottom:10px;font-style:italic;">Comments aren't required, but are available if you'd like to add context to any rating.</div>
+
+          <div class="eval-row">
+            <div class="eval-label">
+              Disciplined
+              <span class="descriptors">Self-motivated · Steady, gets things done · Manages priorities · Thorough, organized, systematic · Core focus before process</span>
+            </div>
+            <div class="rating-group" data-field="disciplined">
+              <button class="rating-btn" data-value="-" onclick="setRating(this)">−</button>
+              <button class="rating-btn" data-value="+/-" onclick="setRating(this)">+/−</button>
+              <button class="rating-btn" data-value="+" onclick="setRating(this)">+</button>
+            </div>
+            <input class="eval-comment" data-comment-field="disciplined" placeholder="Optional comment…" oninput="setComment(this)">
+          </div>
+
+          <div class="eval-row">
+            <div class="eval-label">
+              Humbly Confident
+              <span class="descriptors">Knows their stuff, not arrogant · Vulnerable, no one's perfect · Celebrates others · Decides without ego · Likes to win, not afraid of losing</span>
+            </div>
+            <div class="rating-group" data-field="humblyConfident">
+              <button class="rating-btn" data-value="-" onclick="setRating(this)">−</button>
+              <button class="rating-btn" data-value="+/-" onclick="setRating(this)">+/−</button>
+              <button class="rating-btn" data-value="+" onclick="setRating(this)">+</button>
+            </div>
+            <input class="eval-comment" data-comment-field="humblyConfident" placeholder="Optional comment…" oninput="setComment(this)">
+          </div>
+
+          <div class="eval-row">
+            <div class="eval-label">
+              Always Improving
+              <span class="descriptors">Good enough isn't good enough · Solutions-oriented · Resilient, gets back up · Passionate about the industry · Driven for excellence, not perfection</span>
+            </div>
+            <div class="rating-group" data-field="alwaysImproving">
+              <button class="rating-btn" data-value="-" onclick="setRating(this)">−</button>
+              <button class="rating-btn" data-value="+/-" onclick="setRating(this)">+/−</button>
+              <button class="rating-btn" data-value="+" onclick="setRating(this)">+</button>
+            </div>
+            <input class="eval-comment" data-comment-field="alwaysImproving" placeholder="Optional comment…" oninput="setComment(this)">
+          </div>
+
+          <div class="eval-row">
+            <div class="eval-label">
+              Forward-Looking
+              <span class="descriptors">Uses available planning time · Works ahead of needs · Thinks long-term, minimize band-aids · Aware of risks, seizes opportunities · Career-oriented</span>
+            </div>
+            <div class="rating-group" data-field="forwardLooking">
+              <button class="rating-btn" data-value="-" onclick="setRating(this)">−</button>
+              <button class="rating-btn" data-value="+/-" onclick="setRating(this)">+/−</button>
+              <button class="rating-btn" data-value="+" onclick="setRating(this)">+</button>
+            </div>
+            <input class="eval-comment" data-comment-field="forwardLooking" placeholder="Optional comment…" oninput="setComment(this)">
+          </div>
+
+          <div class="eval-row">
+            <div class="eval-label">
+              Cares & Connects with People
+              <span class="descriptors">Listens, earns trust through BRAVING · Authentic, never shady · Nurtures lasting relationships · Demonstrates empathy · Expresses gratitude intentionally</span>
+            </div>
+            <div class="rating-group" data-field="caresConnects">
+              <button class="rating-btn" data-value="-" onclick="setRating(this)">−</button>
+              <button class="rating-btn" data-value="+/-" onclick="setRating(this)">+/−</button>
+              <button class="rating-btn" data-value="+" onclick="setRating(this)">+</button>
+            </div>
+            <input class="eval-comment" data-comment-field="caresConnects" placeholder="Optional comment…" oninput="setComment(this)">
+          </div>
+        </div>
+
+        <!-- GWC -->
+        <div class="eval-section">
+          <div class="eval-section-title">GWC — Right Seat</div>
+
+          <div class="eval-row">
+            <div class="eval-label">
+              Gets It
+              <span class="descriptors">Truly understands the role, the culture, the systems, and the pace</span>
+            </div>
+            <div class="rating-group" data-field="getsIt">
+              <button class="rating-btn" data-value="Y" onclick="setRating(this)">Y</button>
+              <button class="rating-btn" data-value="N" onclick="setRating(this)">N</button>
+            </div>
+          </div>
+
+          <div class="eval-row">
+            <div class="eval-label">
+              Wants It
+              <span class="descriptors">Genuinely desires the role and its responsibilities — not just going through the motions</span>
+            </div>
+            <div class="rating-group" data-field="wantsIt">
+              <button class="rating-btn" data-value="Y" onclick="setRating(this)">Y</button>
+              <button class="rating-btn" data-value="N" onclick="setRating(this)">N</button>
+            </div>
+          </div>
+
+          <div class="eval-row">
+            <div class="eval-label">
+              Capacity to Do It
+              <span class="descriptors">Has the time, knowledge, and emotional/intellectual bandwidth to perform at a high level</span>
+            </div>
+            <div class="rating-group" data-field="capacity">
+              <button class="rating-btn" data-value="Y" onclick="setRating(this)">Y</button>
+              <button class="rating-btn" data-value="N" onclick="setRating(this)">N</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+          <button class="btn btn-primary" onclick="submitEvaluation()">Submit Evaluation</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SUMMARY VIEW ═══ -->
+  <div id="view-summary" class="view">
+    <div class="card" style="padding:16px 24px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span class="field-label" style="margin-bottom:0;white-space:nowrap;">Filter by</span>
+        <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+        <button class="filter-btn" data-filter="Operations" onclick="setFilter('Operations')">Operations</button>
+        <button class="filter-btn" data-filter="Sales" onclick="setFilter('Sales')">Sales</button>
+        <button class="filter-btn" data-filter="Design" onclick="setFilter('Design')">Design</button>
+        <button class="filter-btn" data-filter="Production" onclick="setFilter('Production')">Production</button>
+        <select id="individualFilter" onchange="setFilter(this.value || 'all')" style="width:180px;padding:7px 12px;font-size:13px;">
+          <option value="">Individual…</option>
+        </select>
+        <div style="border-left:1px solid var(--cloud);height:24px;margin:0 4px;"></div>
+        <select id="sessionFilter" onchange="setSessionFilter(this.value)" style="width:180px;padding:7px 12px;font-size:13px;">
+          <option value="">All Sessions</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+        <label class="toggle" style="transform:scale(0.75);">
+          <input type="checkbox" id="adminToggleDelete" onchange="toggleDeleteMode()">
+          <span class="toggle-track"></span>
+        </label>
+        <span style="font-size:12px;color:var(--steel);cursor:pointer;" onclick="document.getElementById('adminToggleDelete').click()">🗑 Manage</span>
+      </div>
+    </div>
+    <div id="summaryContent"></div>
+  </div>
+
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" style="position:relative;">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Admin Slide Panel -->
+<div class="admin-panel-overlay" id="adminOverlay" onclick="closeAdminPanel()"></div>
+<div class="admin-panel" id="adminPanel">
+  <div class="admin-panel-header">
+    <div class="card-title">Admin</div>
+    <button class="admin-panel-close" onclick="closeAdminPanel()">✕</button>
+  </div>
+  <div class="admin-panel-body">
+
+    <div class="admin-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="admin-section-title" style="margin-bottom:0;">Team Roster</div>
+        <button class="btn btn-secondary btn-sm" onclick="sortRosterByDept()" style="font-size:11px;padding:3px 10px;">Sort by dept</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input type="text" id="newEmployeeName" placeholder="Name" style="flex:1;">
+        <select id="newEmployeeDept" style="width:130px;">
+          <option value="">Dept…</option>
+          <option value="Operations">Operations</option>
+          <option value="Sales">Sales</option>
+          <option value="Design">Design</option>
+          <option value="Production">Production</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="addNewEmployee()">Add</button>
+      </div>
+      <div id="rosterList" style="font-size:13px;color:var(--steel);max-height:320px;overflow-y:auto;"></div>
+    </div>
+
+    <div style="height:1px;background:var(--cloud);margin:20px -24px;"></div>
+
+    <div class="admin-section">
+      <div class="admin-section-title">Evaluation Sessions</div>
+      <div style="font-size:11.5px;color:var(--steel);margin-bottom:10px;line-height:1.5;">Toggle on to open a session for evaluation. Toggling off keeps all data intact — it just hides the session from the Evaluate tab.</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input type="text" id="newSessionName" placeholder="e.g. Q1 2026 Review" style="flex:1;">
+        <button class="btn btn-secondary btn-sm" onclick="addSession()">Create</button>
+      </div>
+      <div id="sessionList" style="font-size:13px;color:var(--steel);">No sessions created.</div>
+    </div>
+
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+</div><!-- end appContainer -->
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  SHAREPOINT CONFIGURATION & AUTH
+// ══════════════════════════════════════════════════════════
+
+const SP_CONFIG = {
+  siteUrl: 'https://bellweather.sharepoint.com/sites/OperationsSecure',
+  lists: { employees: 'PA_Roster', evaluations: 'PA_Evaluations', sessions: 'PA_Sessions' },
+  clientId: '84b37f0e-b149-4089-9bdc-fc654715db23',
+  tenantId: 'ff0e3f46-615a-4a22-8a80-4bb83d627785',
+  redirectUri: 'https://chicophilly.github.io/bellweather-tools/people-analyzer.html',
+};
+
+let msalInstance = null;
+let accessToken = null;
+let isOnline = false;
+
+function listApiUrl(listName) {
+  return `${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${listName}')`;
+}
+
+async function initMsal() {
+  if (msalInstance) return;
+  msalInstance = new msal.PublicClientApplication({
+    auth: {
+      clientId: SP_CONFIG.clientId,
+      authority: `https://login.microsoftonline.com/${SP_CONFIG.tenantId}`,
+      redirectUri: SP_CONFIG.redirectUri
+    },
+    cache: { cacheLocation: 'sessionStorage' }
+  });
+  await msalInstance.initialize();
+  await msalInstance.handleRedirectPromise();
+}
+
+async function login() {
+  try {
+    document.getElementById('loginError').style.display = 'none';
+    if (!msalInstance) await initMsal();
+    await msalInstance.loginRedirect({
+      scopes: ['https://bellweather.sharepoint.com/AllSites.Manage']
+    });
+  } catch (err) {
+    console.error('Login failed:', err);
+    const el = document.getElementById('loginError');
+    el.textContent = 'Login failed: ' + (err.message || 'Unknown error. Please try again.');
+    el.style.display = 'block';
+  }
+}
+
+function skipLogin() {
+  isOnline = false;
+  showApp();
+}
+
+function showApp() {
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('appContainer').style.display = 'block';
+  updateConnStatus();
+  populateEmployeeDropdown();
+  populateSessionDropdowns();
+  renderSessionList();
+}
+
+function updateConnStatus() {
+  const dot = document.getElementById('connDot');
+  const label = document.getElementById('connLabel');
+  if (isOnline) {
+    dot.style.background = '#2d8a5e';
+    label.textContent = 'SharePoint';
+    label.style.color = '#a8b5cc';
+  } else {
+    dot.style.background = 'var(--amber)';
+    label.textContent = 'Offline';
+    label.style.color = 'var(--silver)';
+  }
+}
+
+async function getToken() {
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length === 0) throw new Error('No accounts signed in');
+  const resp = await msalInstance.acquireTokenSilent({
+    scopes: ['https://bellweather.sharepoint.com/AllSites.Manage'],
+    account: accounts[0]
+  });
+  return resp.accessToken;
+}
+
+async function spFetch(url, options = {}) {
+  if (!accessToken) accessToken = await getToken();
+  const headers = {
+    'Authorization': `Bearer ${accessToken}`,
+    'Accept': 'application/json;odata=nometadata',
+    'Content-Type': 'application/json;odata=nometadata',
+    ...(options.headers || {})
+  };
+  let resp = await fetch(url, { ...options, headers });
+  if (resp.status === 401) {
+    accessToken = await getToken();
+    headers.Authorization = `Bearer ${accessToken}`;
+    resp = await fetch(url, { ...options, headers });
+  }
+  if (!resp.ok && resp.status !== 204) {
+    const text = await resp.text();
+    throw new Error(`SharePoint error ${resp.status}: ${text}`);
+  }
+  return resp;
+}
+
+// ══════════════════════════════════════════════════════════
+//  DATA LAYER
+// ══════════════════════════════════════════════════════════
+
+let employees = [];
+let evaluations = [];
+let sessions = [];
+
+async function loadAllData() {
+  try {
+    await Promise.all([loadEmployees(), loadEvaluations(), loadSessions()]);
+  } catch (err) {
+    console.error('Failed to load data:', err);
+    showToast('Error loading data from SharePoint.');
+  }
+}
+
+async function loadEmployees() {
+  const resp = await spFetch(
+    `${listApiUrl(SP_CONFIG.lists.employees)}/items?$select=Id,EmployeeName,Department&$top=1000`
+  );
+  const data = await resp.json();
+  employees = (data.value || []).map(item => ({
+    id: String(item.Id),
+    name: item.EmployeeName,
+    department: item.Department
+  }));
+}
+
+async function loadEvaluations() {
+  const resp = await spFetch(
+    `${listApiUrl(SP_CONFIG.lists.evaluations)}/items?$select=Id,SessionId,EmployeeName,EvaluatorName,EvaluationDate,Disciplined,HumblyConfident,AlwaysImproving,ForwardLooking,CaresConnects,GetsIt,WantsIt,Capacity,Comments&$top=5000`
+  );
+  const data = await resp.json();
+  evaluations = (data.value || []).map(item => ({
+    id: String(item.Id),
+    sessionId: String(item.SessionId || ''),
+    employeeName: item.EmployeeName,
+    evaluatorName: item.EvaluatorName,
+    date: item.EvaluationDate,
+    disciplined: item.Disciplined,
+    humblyConfident: item.HumblyConfident,
+    alwaysImproving: item.AlwaysImproving,
+    forwardLooking: item.ForwardLooking,
+    caresConnects: item.CaresConnects,
+    getsIt: item.GetsIt,
+    wantsIt: item.WantsIt,
+    capacity: item.Capacity,
+    comments: item.Comments ? (function(){ try { return JSON.parse(item.Comments); } catch(e) { return null; } })() : null
+  }));
+}
+
+async function loadSessions() {
+  const resp = await spFetch(
+    `${listApiUrl(SP_CONFIG.lists.sessions)}/items?$select=Id,SessionName,CreatedDate&$top=500`
+  );
+  const data = await resp.json();
+  sessions = (data.value || []).map(item => ({
+    id: String(item.Id),
+    name: item.SessionName,
+    createdDate: item.CreatedDate
+  }));
+}
+
+async function spAddEmployee(name, department) {
+  const resp = await spFetch(`${listApiUrl(SP_CONFIG.lists.employees)}/items`, {
+    method: 'POST',
+    body: JSON.stringify({ EmployeeName: name, Department: department })
+  });
+  const item = await resp.json();
+  return { id: String(item.Id), name: item.EmployeeName, department: item.Department };
+}
+
+async function spAddEvaluation(evalData) {
+  const resp = await spFetch(`${listApiUrl(SP_CONFIG.lists.evaluations)}/items`, {
+    method: 'POST',
+    body: JSON.stringify({
+      SessionId: evalData.sessionId,
+      EmployeeName: evalData.employeeName,
+      EvaluatorName: evalData.evaluatorName,
+      EvaluationDate: evalData.date,
+      Disciplined: evalData.disciplined,
+      HumblyConfident: evalData.humblyConfident,
+      AlwaysImproving: evalData.alwaysImproving,
+      ForwardLooking: evalData.forwardLooking,
+      CaresConnects: evalData.caresConnects,
+      GetsIt: evalData.getsIt,
+      WantsIt: evalData.wantsIt,
+      Capacity: evalData.capacity,
+      Comments: evalData.comments ? JSON.stringify(evalData.comments) : null
+    })
+  });
+  const item = await resp.json();
+  return { ...evalData, id: String(item.Id) };
+}
+
+async function spAddSession(name, createdDate) {
+  const resp = await spFetch(`${listApiUrl(SP_CONFIG.lists.sessions)}/items`, {
+    method: 'POST',
+    body: JSON.stringify({ SessionName: name, CreatedDate: createdDate })
+  });
+  const item = await resp.json();
+  return { id: String(item.Id), name: item.SessionName, createdDate: item.CreatedDate };
+}
+
+async function spDeleteItem(listName, id) {
+  await spFetch(`${listApiUrl(listName)}/items(${parseInt(id)})`, {
+    method: 'POST',
+    headers: { 'X-HTTP-Method': 'DELETE', 'IF-MATCH': '*' }
+  });
+}
+
+async function spDeleteMultiple(listName, ids) {
+  for (const id of ids) {
+    await spDeleteItem(listName, id);
+  }
+}
+
+const CORE_VALUES = [
+  { key: 'disciplined', label: 'Disciplined' },
+  { key: 'humblyConfident', label: 'Humbly Confident' },
+  { key: 'alwaysImproving', label: 'Always Improving' },
+  { key: 'forwardLooking', label: 'Forward-Looking' },
+  { key: 'caresConnects', label: 'Cares & Connects' }
+];
+const GWC = [
+  { key: 'getsIt', label: 'Gets It' },
+  { key: 'wantsIt', label: 'Wants It' },
+  { key: 'capacity', label: 'Capacity' }
+];
+const DEPARTMENTS = ['Operations', 'Sales', 'Design', 'Production'];
+
+
+// ══════════════════════════════════════════════════════════
+//  UI LOGIC
+// ══════════════════════════════════════════════════════════
+
+let currentRatings = {};
+let currentComments = {};
+let currentFilter = 'all';
+let currentSessionFilter = '';
+let adminMode = false;
+
+function toggleAdminPanel() {
+  const panel = document.getElementById('adminPanel');
+  const overlay = document.getElementById('adminOverlay');
+  const toggle = document.getElementById('adminPanelToggle');
+  const isOpen = panel.classList.contains('open');
+  if (isOpen) {
+    closeAdminPanel();
+  } else {
+    panel.classList.add('open');
+    overlay.classList.add('open');
+    toggle.checked = true;
+    renderSessionList();
+    renderRosterList();
+  }
+}
+
+function closeAdminPanel() {
+  document.getElementById('adminPanel').classList.remove('open');
+  document.getElementById('adminOverlay').classList.remove('open');
+  document.getElementById('adminPanelToggle').checked = false;
+}
+
+function toggleDeleteMode() {
+  adminMode = document.getElementById('adminToggleDelete').checked;
+  document.body.classList.toggle('admin-mode', adminMode);
+  if (document.getElementById('view-summary').classList.contains('active')) {
+    renderSummary();
+  }
+}
+
+// ── Session Management ──
+
+async function addSession() {
+  const name = document.getElementById('newSessionName').value.trim();
+  if (!name) { showToast('Please enter a session name.'); return; }
+  if (sessions.find(s => s.name.toLowerCase() === name.toLowerCase())) {
+    showToast('A session with that name already exists.'); return;
+  }
+  const createdDate = new Date().toISOString();
+  try {
+    if (isOnline) {
+      const newSession = await spAddSession(name, createdDate);
+      sessions.push(newSession);
+    } else {
+      sessions.push({ id: 'local-' + Date.now(), name, createdDate });
+    }
+    document.getElementById('newSessionName').value = '';
+    populateSessionDropdowns();
+    renderSessionList();
+    showToast(`Session "${name}" created.`);
+  } catch (err) {
+    console.error(err);
+    showToast('Error creating session in SharePoint.');
+  }
+}
+
+async function deleteSession(sessionId) {
+  const s = sessions.find(x => x.id === sessionId);
+  if (!s) return;
+  const evalCount = evaluations.filter(e => e.sessionId === sessionId).length;
+  const msg = evalCount > 0
+    ? `Delete session "${s.name}" and its ${evalCount} evaluation(s)?`
+    : `Delete session "${s.name}"?`;
+  if (!confirm(msg)) return;
+  try {
+    if (isOnline) {
+      const evalIds = evaluations.filter(e => e.sessionId === sessionId).map(e => e.id);
+      await spDeleteMultiple(SP_CONFIG.lists.evaluations, evalIds);
+      await spDeleteItem(SP_CONFIG.lists.sessions, sessionId);
+    }
+    evaluations = evaluations.filter(e => e.sessionId !== sessionId);
+    sessions = sessions.filter(x => x.id !== sessionId);
+    populateSessionDropdowns();
+    renderSessionList();
+    showToast(`Session "${s.name}" deleted.`);
+    if (currentSessionFilter === sessionId) {
+      currentSessionFilter = '';
+      document.getElementById('sessionFilter').value = '';
+    }
+    renderSummary();
+  } catch (err) {
+    console.error(err);
+    showToast('Error deleting session from SharePoint.');
+  }
+}
+
+let rosterEditId = null; // tracks which row is in edit mode
+let dragSrcId = null;   // tracks drag source
+
+function renderRosterList() {
+  const container = document.getElementById('rosterList');
+  if (employees.length === 0) { container.innerHTML = '<div style="color:var(--silver);padding:8px 0;">No team members added yet.</div>'; return; }
+  const deptColors = { Operations:'var(--dept-operations)', Sales:'var(--dept-sales)', Design:'var(--dept-design)', Production:'var(--dept-production)' };
+
+  container.innerHTML = employees.map(emp => {
+    const dc = deptColors[emp.department] || 'var(--steel)';
+    const isEditing = rosterEditId === emp.id;
+
+    if (isEditing) {
+      return `<div class="roster-row editing" data-emp-id="${emp.id}" style="padding:8px 0;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--cloud);background:rgba(200,149,62,0.04);margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:4px;">
+        <input type="text" id="editName_${emp.id}" value="${emp.name}" style="flex:1;font-size:13px;padding:3px 8px;">
+        <select id="editDept_${emp.id}" style="font-size:12px;padding:3px 6px;border:1px solid var(--cloud);border-radius:4px;width:120px;">
+          <option value="Operations" ${emp.department==='Operations'?'selected':''}>Operations</option>
+          <option value="Sales" ${emp.department==='Sales'?'selected':''}>Sales</option>
+          <option value="Design" ${emp.department==='Design'?'selected':''}>Design</option>
+          <option value="Production" ${emp.department==='Production'?'selected':''}>Production</option>
+        </select>
+        <button onclick="saveEmployeeEdit('${emp.id}')" style="background:none;border:none;color:var(--green);cursor:pointer;font-size:16px;padding:0 3px;" title="Save">✓</button>
+        <button onclick="cancelEmployeeEdit()" style="background:none;border:none;color:var(--silver);cursor:pointer;font-size:14px;padding:0 3px;" title="Cancel">✕</button>
+      </div>`;
+    }
+
+    return `<div class="roster-row" draggable="true" data-emp-id="${emp.id}"
+      ondragstart="rosterDragStart(event)" ondragover="rosterDragOver(event)" ondrop="rosterDrop(event)" ondragend="rosterDragEnd(event)"
+      style="padding:6px 0;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--cloud);cursor:grab;">
+      <span style="color:var(--silver);font-size:11px;cursor:grab;padding:0 2px;user-select:none;" title="Drag to reorder">⠿</span>
+      <span style="flex:1;font-weight:500;color:var(--slate);">${emp.name}</span>
+      <span style="font-size:11px;color:${dc};background:rgba(0,0,0,0.04);padding:1px 8px;border-radius:10px;">${emp.department}</span>
+      <button onclick="startEmployeeEdit('${emp.id}')" style="background:none;border:none;color:var(--silver);cursor:pointer;font-size:13px;padding:0 3px;" title="Edit">✎</button>
+      <button onclick="removeEmployee('${emp.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 3px;" title="Remove">&times;</button>
+    </div>`;
+  }).join('');
+
+  // Focus the name input if we're editing
+  if (rosterEditId) {
+    const inp = document.getElementById('editName_' + rosterEditId);
+    if (inp) { inp.focus(); inp.select(); }
+  }
+}
+
+function startEmployeeEdit(id) {
+  rosterEditId = id;
+  renderRosterList();
+}
+
+function cancelEmployeeEdit() {
+  rosterEditId = null;
+  renderRosterList();
+}
+
+async function saveEmployeeEdit(id) {
+  const emp = employees.find(e => e.id === id);
+  if (!emp) return;
+  const newName = document.getElementById('editName_' + id).value.trim();
+  const newDept = document.getElementById('editDept_' + id).value;
+  if (!newName) { showToast('Name cannot be empty.'); return; }
+
+  const oldName = emp.name;
+  emp.name = newName;
+  emp.department = newDept;
+
+  // Update evaluations that reference this person by name
+  if (oldName !== newName) {
+    evaluations.forEach(ev => {
+      if (ev.employeeName === oldName) ev.employeeName = newName;
+    });
+    // Update in SharePoint if online
+    if (isOnline) {
+      const matchingEvals = evaluations.filter(ev => ev.employeeName === newName);
+      for (const ev of matchingEvals) {
+        if (!String(ev.id).startsWith('local-')) {
+          try {
+            const url = listApiUrl(SP_CONFIG.lists.evaluations) + `/items(${ev.id})`;
+            await fetch(url, {
+              method: 'POST',
+              headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json', 'IF-MATCH': '*', 'X-HTTP-Method': 'MERGE' },
+              body: JSON.stringify({ EmployeeName: newName })
+            });
+          } catch(e) { console.error('Failed to update eval name:', e); }
+        }
+      }
+    }
+  }
+
+  if (isOnline && !String(id).startsWith('local-')) {
+    try {
+      const url = listApiUrl(SP_CONFIG.lists.employees) + `/items(${id})`;
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json', 'IF-MATCH': '*', 'X-HTTP-Method': 'MERGE' },
+        body: JSON.stringify({ EmployeeName: newName, Department: newDept })
+      });
+    } catch(e) { console.error('Failed to update employee:', e); }
+  }
+
+  rosterEditId = null;
+  renderRosterList();
+  populateEmployeeDropdown();
+  populateIndividualFilter();
+  renderSummary();
+  showToast(`Updated ${newName}.`);
+}
+
+function sortRosterByDept() {
+  const deptOrder = ['Operations', 'Sales', 'Design', 'Production'];
+  employees.sort((a, b) => {
+    const da = deptOrder.indexOf(a.department);
+    const db = deptOrder.indexOf(b.department);
+    if (da !== db) return da - db;
+    return a.name.localeCompare(b.name);
+  });
+  renderRosterList();
+  showToast('Sorted by department.');
+}
+
+// ── Drag and drop reordering ──
+function rosterDragStart(e) {
+  dragSrcId = e.currentTarget.dataset.empId;
+  e.currentTarget.style.opacity = '0.4';
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function rosterDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const row = e.currentTarget;
+  row.style.borderTop = '2px solid var(--gold)';
+}
+
+function rosterDrop(e) {
+  e.preventDefault();
+  const targetId = e.currentTarget.dataset.empId;
+  e.currentTarget.style.borderTop = '';
+  if (dragSrcId === targetId) return;
+
+  const srcIdx = employees.findIndex(emp => String(emp.id) === String(dragSrcId));
+  const tgtIdx = employees.findIndex(emp => String(emp.id) === String(targetId));
+  if (srcIdx < 0 || tgtIdx < 0) return;
+
+  const [moved] = employees.splice(srcIdx, 1);
+  employees.splice(tgtIdx, 0, moved);
+  renderRosterList();
+}
+
+function rosterDragEnd(e) {
+  e.currentTarget.style.opacity = '1';
+  document.querySelectorAll('.roster-row').forEach(r => r.style.borderTop = '');
+  dragSrcId = null;
+}
+
+async function removeEmployee(id) {
+  if (!confirm('Remove this team member? This will not delete their evaluations.')) return;
+  employees = employees.filter(e => e.id !== id);
+  if (isOnline && !String(id).startsWith('local-')) {
+    try {
+      const url = listApiUrl(SP_CONFIG.lists.employees) + `/items(${id})`;
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + accessToken, 'IF-MATCH': '*', 'X-HTTP-Method': 'DELETE' }
+      });
+    } catch(e) { console.error('Failed to delete employee:', e); }
+  }
+  populateEmployeeDropdown();
+  renderRosterList();
+  populateSessionDropdowns();
+  renderSummary();
+  showToast('Team member removed.');
+}
+
+let sessionDragSrcId = null;
+
+function renderSessionList() {
+  const el = document.getElementById('sessionList');
+  if (sessions.length === 0) { el.innerHTML = '<div style="color:var(--silver);padding:8px 0;">No sessions created.</div>'; return; }
+  el.innerHTML = sessions.map(s => {
+    const count = evaluations.filter(e => e.sessionId === s.id).length;
+    const isActive = s.active !== false;
+    return `<div class="session-row" draggable="true" data-session-id="${s.id}"
+      ondragstart="sessionDragStart(event)" ondragover="sessionDragOver(event)" ondrop="sessionDrop(event)" ondragend="sessionDragEnd(event)"
+      style="padding:6px 0;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--cloud);cursor:grab;">
+      <span style="color:var(--silver);font-size:11px;cursor:grab;padding:0 2px;user-select:none;" title="Drag to reorder">⠿</span>
+      <label class="toggle toggle-green" style="transform:scale(0.7);">
+        <input type="checkbox" ${isActive?'checked':''} onchange="toggleSessionActive('${s.id}',this.checked)">
+        <span class="toggle-track"></span>
+      </label>
+      <span style="flex:1;font-weight:500;color:var(--navy);${isActive?'':'opacity:0.45;text-decoration:line-through;'}">${s.name}</span>
+      <span style="opacity:0.6;font-size:12px;">(${count} eval${count !== 1 ? 's' : ''})</span>
+      <button onclick="deleteSession('${s.id}')" style="margin-left:auto;background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px 4px;opacity:0.6;" title="Delete session" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+function sessionDragStart(e) {
+  sessionDragSrcId = e.currentTarget.dataset.sessionId;
+  e.currentTarget.style.opacity = '0.4';
+  e.dataTransfer.effectAllowed = 'move';
+}
+function sessionDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.style.borderTop = '2px solid var(--gold)';
+}
+function sessionDrop(e) {
+  e.preventDefault();
+  const targetId = e.currentTarget.dataset.sessionId;
+  e.currentTarget.style.borderTop = '';
+  if (sessionDragSrcId === targetId) return;
+  const srcIdx = sessions.findIndex(s => String(s.id) === String(sessionDragSrcId));
+  const tgtIdx = sessions.findIndex(s => String(s.id) === String(targetId));
+  if (srcIdx < 0 || tgtIdx < 0) return;
+  const [moved] = sessions.splice(srcIdx, 1);
+  sessions.splice(tgtIdx, 0, moved);
+  renderSessionList();
+  populateSessionDropdowns();
+}
+function sessionDragEnd(e) {
+  e.currentTarget.style.opacity = '1';
+  document.querySelectorAll('.session-row').forEach(r => r.style.borderTop = '');
+  sessionDragSrcId = null;
+}
+
+function toggleSessionActive(id, active) {
+  const s = sessions.find(x => x.id === id);
+  if (s) s.active = active;
+  renderSessionList();
+  populateSessionDropdowns();
+}
+
+function populateSessionDropdowns() {
+  // Evaluate tab session selector
+  const evalSel = document.getElementById('sessionSelect');
+  const evalCurrent = evalSel.value;
+  evalSel.innerHTML = '<option value="">Select a session…</option>';
+  sessions.filter(s => s.active !== false).forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.name;
+    evalSel.appendChild(opt);
+  });
+  if (evalCurrent) evalSel.value = evalCurrent;
+
+  // Summary tab session filter
+  const sumSel = document.getElementById('sessionFilter');
+  const sumCurrent = sumSel.value;
+  sumSel.innerHTML = '<option value="">All Sessions</option>';
+  sessions.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.name;
+    sumSel.appendChild(opt);
+  });
+  if (sumCurrent) sumSel.value = sumCurrent;
+}
+
+function setSessionFilter(sessionId) {
+  currentSessionFilter = sessionId;
+  populateIndividualFilter();
+  renderSummary();
+}
+
+function getFilteredEvaluations() {
+  if (!currentSessionFilter) return evaluations;
+  return evaluations.filter(e => e.sessionId === currentSessionFilter);
+}
+
+function getSessionName(sessionId) {
+  const s = sessions.find(x => x.id === sessionId);
+  return s ? s.name : 'Unknown';
+}
+
+async function deleteEvaluation(evalId) {
+  const ev = evaluations.find(e => e.id === evalId);
+  if (!ev) return;
+  if (!confirm(`Delete ${ev.evaluatorName}'s evaluation of ${ev.employeeName} from ${formatTimestamp(ev.date)}?`)) return;
+  try {
+    if (isOnline) await spDeleteItem(SP_CONFIG.lists.evaluations, evalId);
+    evaluations = evaluations.filter(e => e.id !== evalId);
+    renderSessionList();
+    showToast(`Evaluation deleted.`);
+    renderSummary();
+  } catch (err) {
+    console.error(err);
+    showToast('Error deleting evaluation from SharePoint.');
+  }
+}
+
+async function deleteAllEvaluations(empName) {
+  const filteredEvals = getFilteredEvaluations();
+  const toDelete = filteredEvals.filter(e => e.employeeName === empName);
+  const count = toDelete.length;
+  const sessionNote = currentSessionFilter ? ` in session "${getSessionName(currentSessionFilter)}"` : '';
+  if (!confirm(`Delete ${count} evaluation(s) for ${empName}${sessionNote}?`)) return;
+  try {
+    if (isOnline) await spDeleteMultiple(SP_CONFIG.lists.evaluations, toDelete.map(e => e.id));
+    const idsToDelete = new Set(toDelete.map(e => e.id));
+    evaluations = evaluations.filter(e => !idsToDelete.has(e.id));
+    renderSessionList();
+    showToast(`Evaluations for ${empName} deleted.`);
+    setFilter('all');
+  } catch (err) {
+    console.error(err);
+    showToast('Error deleting evaluations from SharePoint.');
+  }
+}
+
+function formatTimestamp(isoStr) {
+  const d = new Date(isoStr);
+  const mo = (d.getMonth()+1).toString().padStart(2,'0');
+  const day = d.getDate().toString().padStart(2,'0');
+  const yr = d.getFullYear().toString().slice(-2);
+  let hr = d.getHours();
+  const ampm = hr >= 12 ? 'PM' : 'AM';
+  hr = hr % 12 || 12;
+  const min = d.getMinutes().toString().padStart(2,'0');
+  return `${mo}/${day}/${yr} ${hr}:${min} ${ampm}`;
+}
+
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelector(`.tab[data-view="${view}"]`).classList.add('active');
+  if (view === 'summary') {
+    populateSessionDropdowns();
+    populateIndividualFilter();
+    renderSummary();
+  }
+}
+
+function populateEmployeeDropdown() {
+  const sel = document.getElementById('employeeSelect');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Select a team member…</option>';
+
+  DEPARTMENTS.forEach(dept => {
+    const deptEmployees = employees.filter(e => e.department === dept);
+    if (deptEmployees.length > 0) {
+      const group = document.createElement('optgroup');
+      group.label = dept;
+      deptEmployees.sort((a,b) => a.name.localeCompare(b.name)).forEach(emp => {
+        const opt = document.createElement('option');
+        opt.value = emp.name;
+        opt.textContent = emp.name;
+        group.appendChild(opt);
+      });
+      sel.appendChild(group);
+    }
+  });
+
+  if (current) sel.value = current;
+}
+
+function handleEmployeeSelect() {
+  const val = document.getElementById('employeeSelect').value;
+  if (val) {
+    document.getElementById('evalFormContainer').style.display = 'block';
+    const emp = employees.find(e => e.name === val);
+    document.getElementById('evalFormTitle').innerHTML = `Evaluating: ${emp.name} ${deptChipHTML(emp.department)}`;
+    clearRatings();
+  } else {
+    document.getElementById('evalFormContainer').style.display = 'none';
+  }
+}
+
+async function addNewEmployee() {
+  const name = document.getElementById('newEmployeeName').value.trim();
+  const dept = document.getElementById('newEmployeeDept').value;
+  if (!name) { showToast('Please enter a name.'); return; }
+  if (!dept) { showToast('Please select a department.'); return; }
+  if (employees.find(e => e.name.toLowerCase() === name.toLowerCase())) {
+    showToast('That person is already on the roster.'); return;
+  }
+  try {
+    if (isOnline) {
+      const newEmp = await spAddEmployee(name, dept);
+      employees.push(newEmp);
+    } else {
+      employees.push({ id: 'local-' + Date.now(), name, department: dept });
+    }
+    populateEmployeeDropdown();
+    renderRosterList();
+    document.getElementById('newEmployeeName').value = '';
+    document.getElementById('newEmployeeDept').value = '';
+    showToast(`${name} added to roster.`);
+  } catch (err) {
+    console.error(err);
+    showToast('Error adding employee to SharePoint.');
+  }
+}
+
+function setRating(btn) {
+  const group = btn.parentElement;
+  const field = group.dataset.field;
+  const value = btn.dataset.value;
+
+  group.querySelectorAll('.rating-btn').forEach(b => {
+    b.className = 'rating-btn';
+  });
+
+  if (value === '+') btn.classList.add('selected-plus');
+  else if (value === '+/-') btn.classList.add('selected-plusminus');
+  else if (value === '-') btn.classList.add('selected-minus');
+  else if (value === 'Y') btn.classList.add('selected-yes');
+  else if (value === 'N') btn.classList.add('selected-no');
+
+  currentRatings[field] = value;
+}
+
+function setComment(input) {
+  const field = input.dataset.commentField;
+  currentComments[field] = input.value;
+}
+
+function clearRatings() {
+  currentRatings = {};
+  currentComments = {};
+  document.querySelectorAll('.rating-btn').forEach(b => b.className = 'rating-btn');
+  document.querySelectorAll('.eval-comment').forEach(c => c.value = '');
+}
+
+function clearForm() {
+  clearRatings();
+  showToast('Form cleared.');
+}
+
+async function submitEvaluation() {
+  const evaluator = document.getElementById('evaluatorName').value.trim();
+  const employeeName = document.getElementById('employeeSelect').value;
+  const sessionId = document.getElementById('sessionSelect').value;
+
+  if (!evaluator) { showToast('Please enter your name as evaluator.'); return; }
+  if (!sessionId) { showToast('Please select a session.'); return; }
+  if (!employeeName) { showToast('Please select a team member.'); return; }
+
+  const allFields = [...CORE_VALUES, ...GWC].map(f => f.key);
+  const missing = allFields.filter(f => !currentRatings[f]);
+  if (missing.length > 0) { showToast('Please complete all ratings before submitting.'); return; }
+
+  // Collect any non-empty comments
+  const comments = {};
+  Object.entries(currentComments).forEach(([k, v]) => { if (v && v.trim()) comments[k] = v.trim(); });
+
+  const evalData = {
+    sessionId,
+    employeeName,
+    evaluatorName: evaluator,
+    date: new Date().toISOString(),
+    comments: Object.keys(comments).length > 0 ? comments : null,
+    ...currentRatings
+  };
+
+  try {
+    if (isOnline) {
+      const saved = await spAddEvaluation(evalData);
+      evaluations.push(saved);
+    } else {
+      evaluations.push({ ...evalData, id: 'local-' + Date.now() });
+    }
+    renderSessionList();
+    showToast(`Evaluation submitted for ${employeeName}.`);
+    clearRatings();
+    document.getElementById('employeeSelect').value = '';
+    document.getElementById('evalFormContainer').style.display = 'none';
+  } catch (err) {
+    console.error(err);
+    showToast('Error saving evaluation to SharePoint.');
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════
+//  SUMMARY VIEW
+// ══════════════════════════════════════════════════════════
+
+function getConsensus(values) {
+  if (values.length === 0) return null;
+  const counts = {};
+  values.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+  // Return the most common value
+  let max = 0, result = values[0];
+  Object.entries(counts).forEach(([val, count]) => {
+    if (count > max) { max = count; result = val; }
+  });
+  return result;
+}
+
+function getStatus(evals) {
+  if (evals.length === 0) return 'none';
+  // Aggregate across all evaluations
+  const allFields = [...CORE_VALUES.map(v => v.key), ...GWC.map(g => g.key)];
+  let hasIssue = false;
+  let hasWatch = false;
+
+  CORE_VALUES.forEach(v => {
+    const consensus = getConsensus(evals.map(e => e[v.key]));
+    if (consensus === '-') hasIssue = true;
+    if (consensus === '+/-') hasWatch = true;
+  });
+  GWC.forEach(g => {
+    const consensus = getConsensus(evals.map(e => e[g.key]));
+    if (consensus === 'N') hasIssue = true;
+  });
+
+  if (hasIssue) return 'issue';
+  if (hasWatch) return 'watch';
+  return 'right';
+}
+
+function chipHTML(value) {
+  if (!value) return '<span class="chip chip-none">—</span>';
+  if (value === '+') return '<span class="chip chip-plus">+</span>';
+  if (value === '+/-') return '<span class="chip chip-plusminus">+/−</span>';
+  if (value === '-') return '<span class="chip chip-minus">−</span>';
+  if (value === 'Y') return '<span class="chip chip-yes">Y</span>';
+  if (value === 'N') return '<span class="chip chip-no">N</span>';
+  return value;
+}
+
+function statusHTML(status) {
+  if (status === 'right') return '<span class="status-bar status-right">Right Person / Right Seat</span>';
+  if (status === 'watch') return '<span class="status-bar status-watch">Watch</span>';
+  if (status === 'issue') return '<span class="status-bar status-issue">Below the Bar</span>';
+  return '<span class="status-bar" style="background:var(--snow);color:var(--silver);">No Data</span>';
+}
+
+function setFilter(filter) {
+  currentFilter = filter;
+  // Update button states
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  const matchingBtn = document.querySelector(`.filter-btn[data-filter="${filter}"]`);
+  if (matchingBtn) matchingBtn.classList.add('active');
+
+  // Sync the individual dropdown
+  const indSelect = document.getElementById('individualFilter');
+  const isIndividual = filter !== 'all' && !DEPARTMENTS.includes(filter);
+  if (isIndividual) {
+    indSelect.value = filter;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  } else {
+    indSelect.value = '';
+  }
+
+  renderSummary();
+}
+
+function populateIndividualFilter() {
+  const sel = document.getElementById('individualFilter');
+  sel.innerHTML = '<option value="">Individual…</option>';
+  const filteredEvals = getFilteredEvaluations();
+  const evaluated = employees.filter(emp => filteredEvals.some(ev => ev.employeeName === emp.name));
+  evaluated.sort((a,b) => a.name.localeCompare(b.name)).forEach(emp => {
+    const opt = document.createElement('option');
+    opt.value = emp.name;
+    opt.textContent = `${emp.name} (${emp.department})`;
+    sel.appendChild(opt);
+  });
+}
+
+function deptChipHTML(dept) {
+  const cls = dept.toLowerCase().replace(/\s+/g, '');
+  return `<span class="dept-chip dept-chip-${cls}">${dept}</span>`;
+}
+
+function deptHeaderClass(dept) {
+  return 'dept-header-' + dept.toLowerCase().replace(/\s+/g, '');
+}
+
+function renderSummary() {
+  const container = document.getElementById('summaryContent');
+  const filteredEvals = getFilteredEvaluations();
+
+  if (filteredEvals.length === 0) {
+    const msg = currentSessionFilter
+      ? `No evaluations in session "${getSessionName(currentSessionFilter)}".`
+      : 'No evaluations submitted yet.';
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>${msg}</p>
+        <p class="hint">Switch to the Evaluate tab to get started.</p>
+      </div>`;
+    return;
+  }
+
+  const isIndividual = currentFilter !== 'all' && !DEPARTMENTS.includes(currentFilter);
+  const filterDepts = currentFilter === 'all' ? DEPARTMENTS :
+                      DEPARTMENTS.includes(currentFilter) ? [currentFilter] : DEPARTMENTS;
+
+  let html = '';
+
+  if (isIndividual) {
+    const emp = employees.find(e => e.name === currentFilter);
+    const allPersonEvals = filteredEvals.filter(e => e.employeeName === currentFilter);
+    if (!emp || allPersonEvals.length === 0) {
+      container.innerHTML = `<div class="empty-state"><p>No evaluations found for ${currentFilter}${currentSessionFilter ? ' in this session' : ''}.</p></div>`;
+      return;
+    }
+
+    // Group evals by session
+    const sessionGroups = [];
+    const sessionIds = [...new Set(allPersonEvals.map(e => e.sessionId))];
+    sessionIds.forEach(sid => {
+      const sEvals = allPersonEvals.filter(e => e.sessionId === sid);
+      if (sEvals.length > 0) sessionGroups.push({ sessionId: sid, evals: sEvals });
+    });
+
+    // Card header — person info + overall status
+    html += `<div class="card">`;
+    html += `<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">`;
+    html += `<div class="card-title" style="margin-bottom:0;">${emp.name}</div>`;
+    html += `<span style="font-size:13px;">${deptChipHTML(emp.department)}</span>`;
+    html += `<span style="margin-left:auto;">${statusHTML(getStatus(allPersonEvals))}</span>`;
+    html += `</div>`;
+
+    // ── Cross-Session Trajectory ──
+    // Get ALL sessions for this person (ignore session filter for trajectory)
+    const allPersonEvalsUnfiltered = evaluations.filter(e => e.employeeName === currentFilter);
+    const allSessionIds = [...new Set(allPersonEvalsUnfiltered.map(e => e.sessionId))];
+    // Order by session array position (user's drag order)
+    const orderedSessionIds = sessions.map(s => s.id).filter(id => allSessionIds.includes(id));
+    // Add any orphaned session IDs not in sessions array
+    allSessionIds.forEach(id => { if (!orderedSessionIds.includes(id)) orderedSessionIds.push(id); });
+
+    if (orderedSessionIds.length > 0) {
+      const trajCols = orderedSessionIds.length;
+      const eName = emp.name.replace(/'/g, "\\'");
+
+      html += `<div class="trajectory-section">`;
+      html += `<div class="trajectory-header">`;
+      html += `<span class="trajectory-title">Trajectory</span>`;
+      if (orderedSessionIds.length > 1) {
+        html += `<button class="btn btn-secondary btn-sm" onclick="exportAllSessionsXLSX('${eName}')" style="margin-left:auto;font-size:11px;">📥 Download All Sessions</button>`;
+      }
+      html += `</div>`;
+      html += `<div class="trajectory-body">`;
+      html += `<div class="trajectory-grid-wrap"><div class="trajectory-grid" style="--session-count:${trajCols};">`;
+
+      // Column headers = session names
+      html += `<div class="tg-header" style="text-align:left;"></div>`;
+      orderedSessionIds.forEach(sid => {
+        html += `<div class="tg-header">${getSessionName(sid)}</div>`;
+      });
+
+      // Core Values rows
+      CORE_VALUES.forEach(v => {
+        html += `<div class="tg-label">${v.label}</div>`;
+        orderedSessionIds.forEach(sid => {
+          const sEvals = allPersonEvalsUnfiltered.filter(e => e.sessionId === sid);
+          html += `<div class="tg-cell">${chipHTML(getConsensus(sEvals.map(e => e[v.key])))}</div>`;
+        });
+      });
+
+      // Divider
+      html += `<div class="tg-divider"></div>`;
+
+      // GWC rows
+      GWC.forEach(g => {
+        html += `<div class="tg-label">${g.label}</div>`;
+        orderedSessionIds.forEach(sid => {
+          const sEvals = allPersonEvalsUnfiltered.filter(e => e.sessionId === sid);
+          html += `<div class="tg-cell">${chipHTML(getConsensus(sEvals.map(e => e[g.key])))}</div>`;
+        });
+      });
+
+      // Status row
+      html += `<div class="tg-label" style="font-weight:600;">Status</div>`;
+      orderedSessionIds.forEach(sid => {
+        const sEvals = allPersonEvalsUnfiltered.filter(e => e.sessionId === sid);
+        html += `<div class="tg-cell">${statusHTML(getStatus(sEvals))}</div>`;
+      });
+
+      html += `</div></div></div></div>`;
+    }
+
+    // Render each session as its own block
+    sessionGroups.forEach(sg => {
+      const evals = sg.evals;
+      const sessionName = getSessionName(sg.sessionId);
+      const colCount = evals.length + 1;
+      const dateRange = formatTimestamp(evals[0].date) + (evals.length > 1 ? ' – ' + formatTimestamp(evals[evals.length - 1].date) : '');
+      const eName = emp.name.replace(/'/g, "\\'");
+      const sId = sg.sessionId.replace(/'/g, "\\'");
+
+      html += `<div class="session-block">`;
+
+      // Session header
+      html += `<div class="session-block-header">`;
+      html += `<button onclick="event.stopPropagation();deletePersonSession('${eName}','${sId}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 2px;opacity:0.6;" title="Delete evaluations for ${emp.name} in ${sessionName}" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">🗑</button>`;
+      html += `<span class="session-name">${sessionName}</span>`;
+      html += `<span style="color:var(--steel);">${evals.length} evaluator${evals.length !== 1 ? 's' : ''}</span>`;
+      html += `<span style="color:var(--steel);">${dateRange}</span>`;
+      html += `<span style="margin-left:auto;">${statusHTML(getStatus(evals))}</span>`;
+      html += `</div>`;
+
+      // Session body
+      html += `<div class="session-block-body">`;
+
+      // Export bar per session
+      html += `<div class="session-block-export">`;
+      html += `<button class="btn btn-secondary btn-sm" onclick="exportPersonSession('${eName}','${sId}','text')">📋 Copy as Text</button>`;
+      html += `<button class="btn btn-secondary btn-sm" onclick="exportPersonSession('${eName}','${sId}','xlsx')">📥 Excel</button>`;
+      html += `</div>`;
+
+      // Core Values grid
+      html += `<div class="eval-section"><div class="eval-section-title">Core Values</div>`;
+      html += `<div class="detail-grid-wrap"><div class="detail-grid" style="--eval-count:${colCount};">`;
+      html += `<div class="dg-header"></div>`;
+      evals.forEach(ev => {
+        html += `<div class="dg-header" style="text-align:center;">${ev.evaluatorName}<br><span style="font-size:10px;font-weight:400;opacity:0.7;">${formatTimestamp(ev.date)}</span><br><button class="delete-btn" style="font-size:11px;padding:2px 6px;margin-top:2px;" onclick="event.stopPropagation();deleteEvaluation('${ev.id}')">✕ remove</button></div>`;
+      });
+      html += `<div class="dg-header" style="text-align:center;color:var(--gold);">Consensus</div>`;
+      CORE_VALUES.forEach(v => {
+        html += `<div class="dg-label">${v.label}</div>`;
+        evals.forEach(ev => {
+          const cmt = ev.comments && ev.comments[v.key] ? `<div style="font-size:10px;color:var(--steel);margin-top:3px;font-style:italic;line-height:1.3;">${ev.comments[v.key]}</div>` : '';
+          html += `<div class="dg-cell">${chipHTML(ev[v.key])}${cmt}</div>`;
+        });
+        html += `<div class="dg-cell">${chipHTML(getConsensus(evals.map(e => e[v.key])))}</div>`;
+      });
+      html += `</div></div></div>`;
+
+      // GWC grid
+      html += `<div class="eval-section"><div class="eval-section-title">GWC — Right Seat</div>`;
+      html += `<div class="detail-grid-wrap"><div class="detail-grid" style="--eval-count:${colCount};">`;
+      html += `<div class="dg-header"></div>`;
+      evals.forEach(ev => {
+        html += `<div class="dg-header" style="text-align:center;">${ev.evaluatorName}<br><span style="font-size:10px;font-weight:400;opacity:0.7;">${formatTimestamp(ev.date)}</span></div>`;
+      });
+      html += `<div class="dg-header" style="text-align:center;color:var(--gold);">Consensus</div>`;
+      GWC.forEach(g => {
+        html += `<div class="dg-label">${g.label}</div>`;
+        evals.forEach(ev => { html += `<div class="dg-cell">${chipHTML(ev[g.key])}</div>`; });
+        html += `<div class="dg-cell">${chipHTML(getConsensus(evals.map(e => e[g.key])))}</div>`;
+      });
+      html += `</div></div></div>`;
+
+      html += `</div></div>`; // close session-block-body and session-block
+    });
+
+    html += `</div>`; // close card
+
+  } else {
+    // Department or All view — show tables
+    filterDepts.forEach(dept => {
+      const deptEmployees = employees.filter(e => e.department === dept);
+      if (deptEmployees.length === 0) return;
+
+      const deptEvals = deptEmployees.filter(emp =>
+        filteredEvals.some(ev => ev.employeeName === emp.name)
+      );
+      if (deptEvals.length === 0) return;
+
+      html += `<div class="dept-group"><div class="dept-header ${deptHeaderClass(dept)}">${dept}</div>`;
+      html += `<div class="card" style="padding:0;overflow:hidden;border-radius:0 0 var(--radius) var(--radius);">`;
+      html += `<table class="summary-table"><thead><tr>`;
+      html += `<th>Name</th>`;
+      CORE_VALUES.forEach(v => { html += `<th>${v.label}</th>`; });
+      GWC.forEach(g => { html += `<th>${g.label}</th>`; });
+      html += `<th>Status</th><th>Evals</th><th></th>`;
+      html += `</tr></thead><tbody>`;
+
+      deptEvals.sort((a,b) => a.name.localeCompare(b.name)).forEach(emp => {
+        const evals = filteredEvals.filter(ev => ev.employeeName === emp.name);
+        const status = getStatus(evals);
+        html += `<tr style="cursor:pointer;" onclick="setFilter('${emp.name.replace(/'/g, "\\'")}')">`;
+        html += `<td>${emp.name}</td>`;
+        CORE_VALUES.forEach(v => {
+          html += `<td>${chipHTML(getConsensus(evals.map(e => e[v.key])))}</td>`;
+        });
+        GWC.forEach(g => {
+          html += `<td>${chipHTML(getConsensus(evals.map(e => e[g.key])))}</td>`;
+        });
+        html += `<td>${statusHTML(status)}</td>`;
+        html += `<td><span class="eval-count">${evals.length} of 5</span></td>`;
+        html += `<td><button class="delete-btn" onclick="event.stopPropagation();deleteAllEvaluations('${emp.name.replace(/'/g, "\\'")}')">🗑</button></td>`;
+        html += `</tr>`;
+      });
+
+      html += `</tbody></table></div></div>`;
+    });
+
+    if (!html) {
+      html = `<div class="empty-state"><p>No evaluations for this department yet.</p></div>`;
+    }
+  }
+
+  container.innerHTML = html;
+}
+
+
+// ══════════════════════════════════════════════════════════
+//  EXPORT
+// ══════════════════════════════════════════════════════════
+
+function exportPersonSession(empName, sessionId, format) {
+  const emp = employees.find(e => e.name === empName);
+  const evals = evaluations.filter(e => e.employeeName === empName && e.sessionId === sessionId);
+  if (!emp || evals.length === 0) { showToast('No evaluations to export.'); return; }
+  const sessionName = getSessionName(sessionId);
+
+  if (format === 'xlsx') {
+    exportPersonXLSX(emp, evals, sessionName);
+  } else {
+    exportPersonText(emp, evals, sessionName);
+  }
+}
+
+async function deletePersonSession(empName, sessionId) {
+  const sessionName = getSessionName(sessionId);
+  const evals = evaluations.filter(e => e.employeeName === empName && e.sessionId === sessionId);
+  if (evals.length === 0) return;
+  if (!confirm(`Delete all ${evals.length} evaluation(s) for ${empName} in "${sessionName}"?`)) return;
+  try {
+    if (isOnline) {
+      await spDeleteMultiple(SP_CONFIG.lists.evaluations, evals.map(e => e.id));
+    }
+    evaluations = evaluations.filter(e => !(e.employeeName === empName && e.sessionId === sessionId));
+    renderSessionList();
+    renderSummary();
+    showToast(`Deleted evaluations for ${empName} in "${sessionName}".`);
+  } catch(err) {
+    console.error(err);
+    showToast('Error deleting evaluations.');
+  }
+}
+
+// Legacy wrapper
+function exportPerson(empName, includeRPRS, format) {
+  const emp = employees.find(e => e.name === empName);
+  const filteredEvals = getFilteredEvaluations();
+  const evals = filteredEvals.filter(e => e.employeeName === empName);
+  if (!emp || evals.length === 0) { showToast('No evaluations to export.'); return; }
+
+  if (format === 'xlsx') {
+    exportPersonXLSX(emp, evals);
+  } else {
+    exportPersonText(emp, evals);
+  }
+}
+
+function exportPersonText(emp, evals, sessionName) {
+  const sessionLabel = sessionName || (currentSessionFilter ? getSessionName(currentSessionFilter) : 'All Sessions');
+  const dateRange = evals.length > 0
+    ? formatTimestamp(evals[0].date) + (evals.length > 1 ? ' – ' + formatTimestamp(evals[evals.length - 1].date) : '')
+    : '';
+
+  let text = '';
+  text += `PEOPLE ANALYZER — ${emp.name}\n`;
+  text += `Department: ${emp.department}\n`;
+  text += `Session: ${sessionLabel}\n`;
+  text += `Evaluations: ${evals.length}  (${dateRange})\n`;
+  text += `${'─'.repeat(50)}\n\n`;
+
+  text += `CORE VALUES\n`;
+  CORE_VALUES.forEach(v => {
+    const consensus = getConsensus(evals.map(e => e[v.key]));
+    text += `\n  ${v.label}:  ${consensus}  (consensus)\n`;
+    evals.forEach(ev => {
+      text += `    ${ev.evaluatorName} (${formatTimestamp(ev.date)}):  ${ev[v.key]}\n`;
+    });
+  });
+
+  text += `\n${'─'.repeat(50)}\n`;
+  text += `\nRIGHT PERSON / RIGHT SEAT (GWC)\n`;
+  GWC.forEach(g => {
+    const consensus = getConsensus(evals.map(e => e[g.key]));
+    text += `\n  ${g.label}:  ${consensus}  (consensus)\n`;
+    evals.forEach(ev => {
+      text += `    ${ev.evaluatorName} (${formatTimestamp(ev.date)}):  ${ev[g.key]}\n`;
+    });
+  });
+
+  const status = getStatus(evals);
+  const statusLabel = status === 'right' ? 'Right Person, Right Seat' :
+                      status === 'watch' ? 'Watch' : 'Below the Bar';
+  text += `\n  Overall: ${statusLabel}\n`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Copied to clipboard — ready to paste.');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;font-family:monospace;font-size:13px;padding:24px;';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.addEventListener('blur', () => ta.remove());
+    showToast('Select all and copy (Ctrl+A, Ctrl+C).');
+  });
+}
+
+function exportAllSessionsXLSX(empName) {
+  const emp = employees.find(e => e.name === empName);
+  if (!emp) { showToast('Employee not found.'); return; }
+
+  const allEvals = evaluations.filter(e => e.employeeName === empName);
+  const allSessionIds = [...new Set(allEvals.map(e => e.sessionId))];
+  const orderedSessionIds = sessions.map(s => s.id).filter(id => allSessionIds.includes(id));
+  allSessionIds.forEach(id => { if (!orderedSessionIds.includes(id)) orderedSessionIds.push(id); });
+
+  if (orderedSessionIds.length === 0) { showToast('No sessions to export.'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  const labelStyle = {
+    font: { name: 'Calibri Light', sz: 11 },
+    fill: { fgColor: { rgb: 'D0CECE' }, patternType: 'solid' },
+    alignment: { horizontal: 'left', vertical: 'center' }
+  };
+  const ratingStyle = {
+    font: { name: 'Calibri Light', sz: 11, bold: true },
+    fill: { fgColor: { rgb: 'FFC000' }, patternType: 'solid' },
+    alignment: { horizontal: 'center', vertical: 'center' }
+  };
+  const xlLabels = {
+    disciplined: 'DISCIPLINED ',
+    humblyConfident: 'HUMBLY CONFIDENT ',
+    alwaysImproving: 'ALWAYS IMPROVING ',
+    forwardLooking: 'FORWARD LOOKING',
+    caresConnects: 'CARES & CONNECTS WITH PEOPLE '
+  };
+
+  orderedSessionIds.forEach(sid => {
+    const sEvals = allEvals.filter(e => e.sessionId === sid);
+    const sName = getSessionName(sid);
+
+    const rows = CORE_VALUES.map(v => [
+      xlLabels[v.key] || v.label.toUpperCase() + ' ',
+      getConsensus(sEvals.map(e => e[v.key]))
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 45.29 }, { wch: 18.86 }];
+    ws['!rows'] = rows.map(() => ({ hpt: 18 }));
+
+    CORE_VALUES.forEach((v, r) => {
+      const addrA = XLSX.utils.encode_cell({ r, c: 0 });
+      const addrB = XLSX.utils.encode_cell({ r, c: 1 });
+      if (ws[addrA]) ws[addrA].s = labelStyle;
+      if (ws[addrB]) {
+        ws[addrB].s = ratingStyle;
+        const cmts = sEvals
+          .filter(e => e.comments && e.comments[v.key])
+          .map(e => e.evaluatorName + ': ' + e.comments[v.key]);
+        if (cmts.length > 0) {
+          ws[addrB].c = cmts.map(t => ({ a: t.split(':')[0], t }));
+          ws[addrB].c.hidden = true;
+        }
+      }
+    });
+
+    // Sheet name must be ≤31 chars and unique
+    const sheetName = sName.substring(0, 31).replace(/[\/*?:\[\]]/g, '');
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const safeName = emp.name.replace(/[^a-zA-Z0-9]/g, '_');
+  const filename = `${safeName}_All_Sessions_${today}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  showToast(`Excel downloaded — ${orderedSessionIds.length} session${orderedSessionIds.length !== 1 ? 's' : ''}.`);
+}
+
+function exportPersonXLSX(emp, evals, sessionName) {
+  // Matching the Bellweather Core Values paste template:
+  // Col A = value label (gray fill), Col B = consensus rating (amber fill, bold, centered)
+  const wb = XLSX.utils.book_new();
+
+  const labelStyle = {
+    font: { name: 'Calibri Light', sz: 11 },
+    fill: { fgColor: { rgb: 'D0CECE' }, patternType: 'solid' },
+    alignment: { horizontal: 'left', vertical: 'center' }
+  };
+  const ratingStyle = {
+    font: { name: 'Calibri Light', sz: 11, bold: true },
+    fill: { fgColor: { rgb: 'FFC000' }, patternType: 'solid' },
+    alignment: { horizontal: 'center', vertical: 'center' }
+  };
+
+  // Labels matching the Bellweather EOS form exactly
+  const xlLabels = {
+    disciplined: 'DISCIPLINED ',
+    humblyConfident: 'HUMBLY CONFIDENT ',
+    alwaysImproving: 'ALWAYS IMPROVING ',
+    forwardLooking: 'FORWARD LOOKING',
+    caresConnects: 'CARES & CONNECTS WITH PEOPLE '
+  };
+
+  const rows = CORE_VALUES.map(v => [
+    xlLabels[v.key] || v.label.toUpperCase() + ' ',
+    getConsensus(evals.map(e => e[v.key]))
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Column widths matching template
+  ws['!cols'] = [{ wch: 45.29 }, { wch: 18.86 }];
+
+  // Row heights
+  ws['!rows'] = rows.map(() => ({ hpt: 18 }));
+
+  // Apply styles and cell comments
+  CORE_VALUES.forEach((v, r) => {
+    const addrA = XLSX.utils.encode_cell({ r, c: 0 });
+    const addrB = XLSX.utils.encode_cell({ r, c: 1 });
+    if (ws[addrA]) ws[addrA].s = labelStyle;
+    if (ws[addrB]) {
+      ws[addrB].s = ratingStyle;
+      // Gather comments for this value across evaluators
+      const cmts = evals
+        .filter(e => e.comments && e.comments[v.key])
+        .map(e => e.evaluatorName + ': ' + e.comments[v.key]);
+      if (cmts.length > 0) {
+        ws[addrB].c = cmts.map(t => ({ a: t.split(':')[0], t, s: { fill: { fgColor: { rgb: 'FFFFFF' } } } }));
+        ws[addrB].c.hidden = true;
+      }
+    }
+  });
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Core Values');
+
+  // Filename: PersonName_SessionName_YYYY-MM-DD.xlsx
+  const today = new Date().toISOString().slice(0, 10);
+  const safeName = emp.name.replace(/[^a-zA-Z0-9]/g, '_');
+  const safeSession = sessionName ? '_' + sessionName.replace(/[^a-zA-Z0-9]/g, '_') : '';
+  const filename = `${safeName}${safeSession}_${today}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  showToast('Excel file downloaded.');
+}
+
+
+// ══════════════════════════════════════════════════════════
+//  DETAIL MODAL
+// ══════════════════════════════════════════════════════════
+
+function showDetail(empName) {
+  const emp = employees.find(e => e.name === empName);
+  const filteredEvals = getFilteredEvaluations();
+  const evals = filteredEvals.filter(e => e.employeeName === empName);
+  if (!emp || evals.length === 0) return;
+
+  const colCount = evals.length + 1;
+
+  let html = `<div class="modal-title">${emp.name}</div>`;
+  html += `<div class="modal-subtitle">${deptChipHTML(emp.department)} · ${evals.length} evaluation${evals.length > 1 ? 's' : ''} · ${statusHTML(getStatus(evals))}</div>`;
+
+  // Core Values breakdown
+  html += `<div class="modal-section">`;
+  html += `<div class="modal-section-title">Core Values</div>`;
+  html += `<div class="detail-grid" style="--eval-count:${colCount};">`;
+  html += `<div class="dg-header"></div>`;
+  evals.forEach(ev => { html += `<div class="dg-header" style="text-align:center;">${ev.evaluatorName}<br><span style="font-size:10px;font-weight:400;opacity:0.7;">${formatTimestamp(ev.date)}</span></div>`; });
+  html += `<div class="dg-header" style="text-align:center;color:var(--gold);">Consensus</div>`;
+
+  CORE_VALUES.forEach(v => {
+    html += `<div class="dg-label">${v.label}</div>`;
+    evals.forEach(ev => { html += `<div class="dg-cell">${chipHTML(ev[v.key])}</div>`; });
+    html += `<div class="dg-cell">${chipHTML(getConsensus(evals.map(e => e[v.key])))}</div>`;
+  });
+  html += `</div></div>`;
+
+  // GWC breakdown
+  html += `<div class="modal-section">`;
+  html += `<div class="modal-section-title">GWC — Right Seat</div>`;
+  html += `<div class="detail-grid" style="--eval-count:${colCount};">`;
+  html += `<div class="dg-header"></div>`;
+  evals.forEach(ev => { html += `<div class="dg-header" style="text-align:center;">${ev.evaluatorName}<br><span style="font-size:10px;font-weight:400;opacity:0.7;">${formatTimestamp(ev.date)}</span></div>`; });
+  html += `<div class="dg-header" style="text-align:center;color:var(--gold);">Consensus</div>`;
+
+  GWC.forEach(g => {
+    html += `<div class="dg-label">${g.label}</div>`;
+    evals.forEach(ev => { html += `<div class="dg-cell">${chipHTML(ev[g.key])}</div>`; });
+    html += `<div class="dg-cell">${chipHTML(getConsensus(evals.map(e => e[g.key])))}</div>`;
+  });
+  html += `</div></div>`;
+
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('detailModal').classList.remove('open');
+}
+
+document.getElementById('detailModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+
+// ══════════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════════
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+
+// ── Init ──
+(async function autoInit() {
+  try {
+    if (msalInstance) return;
+    msalInstance = new msal.PublicClientApplication({
+      auth: {
+        clientId: SP_CONFIG.clientId,
+        authority: `https://login.microsoftonline.com/${SP_CONFIG.tenantId}`,
+        redirectUri: SP_CONFIG.redirectUri
+      },
+      cache: { cacheLocation: 'sessionStorage' }
+    });
+    await msalInstance.initialize();
+
+    // Handle redirect response (returns non-null if coming back from login)
+    const redirectResult = await msalInstance.handleRedirectPromise();
+
+    const accounts = msalInstance.getAllAccounts();
+    if (accounts.length > 0) {
+      try {
+        const resp = await msalInstance.acquireTokenSilent({
+          scopes: ['https://bellweather.sharepoint.com/AllSites.Manage'],
+          account: accounts[0]
+        });
+        accessToken = resp.accessToken;
+        isOnline = true;
+        await loadAllData();
+        showApp();
+        // Pre-populate evaluator name from signed-in account
+        if (accounts[0].name) {
+          document.getElementById('evaluatorName').value = accounts[0].name;
+        }
+      } catch (silentErr) {
+        console.log('Silent token failed, user will need to click sign in.');
+      }
+    }
+  } catch (err) {
+    console.log('Init error:', err);
+  }
+})();
+</script>
+
+</body>
+</html>
