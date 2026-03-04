@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Provision CORE_Tools List</title>
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#F5F3EE;color:#1F2E3E;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+  .card{background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.1);max-width:640px;width:100%;padding:40px;}
+  h1{font-size:22px;margin-bottom:6px;}
+  .sub{color:#6B7280;font-size:14px;margin-bottom:28px;}
+  .step{display:flex;gap:14px;align-items:flex-start;margin-bottom:20px;padding:14px;border-radius:8px;background:#FAFAF7;border:1px solid #E5E2DC;}
+  .step-num{background:#1F2E3E;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+  .step-num.done{background:#5B8A3B;}
+  .step-num.active{background:#C9A84C;}
+  .step-num.error{background:#C55;}
+  .step-text{font-size:14px;line-height:1.5;}
+  .step-text strong{display:block;margin-bottom:2px;}
+  .step-detail{font-size:12px;color:#888;margin-top:4px;}
+  .btn{display:inline-block;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;}
+  .btn-primary{background:#1F2E3E;color:#fff;}
+  .btn-primary:hover{background:#2C3E50;}
+  .btn-primary:disabled{background:#AAA;cursor:not-allowed;}
+  .btn-gold{background:#C9A84C;color:#1F2E3E;}
+  .btn-gold:hover{background:#B8923E;}
+  .btn-gold:disabled{background:#DDD;color:#999;cursor:not-allowed;}
+  .actions{margin-top:28px;display:flex;gap:12px;align-items:center;}
+  #log{margin-top:20px;background:#1F2E3E;color:#A8B5CC;border-radius:8px;padding:16px;font-family:'Cascadia Code','Fira Code',monospace;font-size:12px;line-height:1.6;max-height:300px;overflow-y:auto;display:none;white-space:pre-wrap;}
+  .log-ok{color:#5B8A3B;}
+  .log-warn{color:#C9A84C;}
+  .log-err{color:#E55;}
+  .summary{margin-top:20px;padding:16px;background:#F0F7ED;border-radius:8px;border:1px solid #C5DDB8;display:none;}
+  .summary h3{font-size:14px;margin-bottom:8px;color:#2D6A2D;}
+  .summary p{font-size:13px;color:#444;line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>CORE_Tools List Provisioner</h1>
+  <p class="sub">Creates the CORE_Tools list on BWCore with all columns and seed data via Graph API.</p>
+
+  <div class="step" id="step1">
+    <div class="step-num" id="s1n">1</div>
+    <div class="step-text">
+      <strong>Authenticate</strong>
+      Sign in with your Bellweather Microsoft account.
+      <div class="step-detail" id="s1d"></div>
+    </div>
+  </div>
+
+  <div class="step" id="step2">
+    <div class="step-num" id="s2n">2</div>
+    <div class="step-text">
+      <strong>Create List & Columns</strong>
+      Creates CORE_Tools list with 10 custom columns (Title is built-in).
+      <div class="step-detail" id="s2d"></div>
+    </div>
+  </div>
+
+  <div class="step" id="step3">
+    <div class="step-num" id="s3n">3</div>
+    <div class="step-text">
+      <strong>Populate Seed Data</strong>
+      Inserts all 21 CORE tool records as list items.
+      <div class="step-detail" id="s3d"></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="btnAuth" onclick="doAuth()">Sign In</button>
+    <button class="btn btn-gold" id="btnProvision" onclick="doProvision()" disabled>Create List</button>
+  </div>
+
+  <div id="log"></div>
+
+  <div class="summary" id="summary">
+    <h3>&#10003; Provisioning Complete</h3>
+    <p>The <strong>CORE_Tools</strong> list is live on BWCore. You can view it in <a href="https://bellweather.sharepoint.com/sites/BWCore/_layouts/15/listedit.aspx?List=CORE_Tools" target="_blank">Site Contents</a>. The Taxonomy Rubric tool can now be wired to read/write from this list via Graph API.</p>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════════════
+
+const CONFIG = {
+  clientId: '84b37f0e-b149-4089-9bdc-fc654715db23',
+  tenantId: 'ff0e3f46-615a-4a22-8a80-4bb83d627785',
+  siteHost: 'bellweather.sharepoint.com',
+  sitePath: '/sites/BWCore',
+  listName: 'CORE_Tools'
+};
+
+let msalInstance = null;
+let accessToken = null;
+let siteId = null;
+
+// ══════════════════════════════════════════════════════════
+//  LOGGING
+// ══════════════════════════════════════════════════════════
+
+const logEl = document.getElementById('log');
+function log(msg, cls) {
+  logEl.style.display = 'block';
+  const span = document.createElement('span');
+  span.className = cls || '';
+  span.textContent = msg + '\n';
+  logEl.appendChild(span);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setStep(num, state, detail) {
+  const n = document.getElementById('s' + num + 'n');
+  const d = document.getElementById('s' + num + 'd');
+  n.className = 'step-num ' + (state || '');
+  if (state === 'done') n.textContent = '✓';
+  if (detail) d.textContent = detail;
+}
+
+// ══════════════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════════════
+
+async function doAuth() {
+  try {
+    document.getElementById('btnAuth').disabled = true;
+    setStep(1, 'active', 'Signing in...');
+
+    msalInstance = new msal.PublicClientApplication({
+      auth: {
+        clientId: CONFIG.clientId,
+        authority: 'https://login.microsoftonline.com/' + CONFIG.tenantId,
+        redirectUri: window.location.origin + window.location.pathname
+      },
+      cache: { cacheLocation: 'sessionStorage' }
+    });
+    await msalInstance.initialize();
+    await msalInstance.handleRedirectPromise();
+
+    // Try silent first
+    const accounts = msalInstance.getAllAccounts();
+    let resp;
+    if (accounts.length > 0) {
+      try {
+        resp = await msalInstance.acquireTokenSilent({
+          scopes: ['Sites.Manage.All'],
+          account: accounts[0]
+        });
+      } catch (e) {
+        resp = await msalInstance.acquireTokenPopup({
+          scopes: ['Sites.Manage.All']
+        });
+      }
+    } else {
+      resp = await msalInstance.acquireTokenPopup({
+        scopes: ['Sites.Manage.All']
+      });
+    }
+
+    accessToken = resp.accessToken;
+    const name = resp.account ? resp.account.name : 'Unknown';
+    log('Authenticated as: ' + name, 'log-ok');
+    setStep(1, 'done', 'Signed in as ' + name);
+
+    // Resolve site ID
+    log('Resolving BWCore site ID...');
+    const siteResp = await graphGet('/sites/' + CONFIG.siteHost + ':' + CONFIG.sitePath);
+    siteId = siteResp.id;
+    log('Site ID: ' + siteId, 'log-ok');
+
+    document.getElementById('btnProvision').disabled = false;
+  } catch (err) {
+    log('Auth error: ' + err.message, 'log-err');
+    setStep(1, 'error', err.message);
+    document.getElementById('btnAuth').disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  GRAPH API HELPERS
+// ══════════════════════════════════════════════════════════
+
+async function graphGet(path) {
+  const resp = await fetch('https://graph.microsoft.com/v1.0' + path, {
+    headers: { 'Authorization': 'Bearer ' + accessToken }
+  });
+  if (!resp.ok) throw new Error('GET ' + path + ' → ' + resp.status + ': ' + await resp.text());
+  return resp.json();
+}
+
+async function graphPost(path, body) {
+  const resp = await fetch('https://graph.microsoft.com/v1.0' + path, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + accessToken,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error('POST ' + path + ' → ' + resp.status + ': ' + txt);
+  }
+  return resp.status === 204 ? null : resp.json();
+}
+
+// ══════════════════════════════════════════════════════════
+//  PROVISIONING
+// ══════════════════════════════════════════════════════════
+
+const COLUMNS = [
+  {
+    name: 'ToolId',
+    text: { allowMultipleLines: false, maxLength: 100 }
+  },
+  {
+    name: 'Category',
+    choice: { allowTextEntry: false, choices: ['Analyzer', 'Dashboard', 'Planner', 'Tracker', 'Toolkit'], displayAs: 'dropDownMenu' }
+  },
+  {
+    name: 'Description',
+    text: { allowMultipleLines: true, maxLength: 1000 }
+  },
+  {
+    name: 'Adoption',
+    number: { decimalPlaces: 'none', minimum: 0, maximum: 100 }
+  },
+  {
+    name: 'Impact',
+    number: { decimalPlaces: 'none', minimum: 0, maximum: 100 }
+  },
+  {
+    name: 'Effort',
+    number: { decimalPlaces: 'none', minimum: 1, maximum: 30 }
+  },
+  {
+    name: 'Status',
+    choice: { allowTextEntry: false, choices: ['Conceived', 'Mocked Up', 'Built', 'Deployed'], displayAs: 'dropDownMenu' }
+  },
+  {
+    name: 'Dependencies',
+    text: { allowMultipleLines: false, maxLength: 500 }
+  },
+  {
+    name: 'SortOrder',
+    number: { decimalPlaces: 'none', minimum: 0, maximum: 999 }
+  },
+  {
+    name: 'SchedWeek',
+    number: { decimalPlaces: 'none', minimum: 0, maximum: 999 }
+  },
+  {
+    name: 'DurWeeks',
+    number: { decimalPlaces: 'none', minimum: 0, maximum: 999 }
+  }
+];
+
+const SEED_DATA = [
+  {Title:'Estimating Tool',ToolId:'estimating-tool',Category:'Toolkit',Description:'Comp blending with age/confidence escalation. Currently V4 Excel, future web-based.',Adoption:95,Impact:95,Effort:2,Status:'Built',Dependencies:'',SortOrder:0,SchedWeek:0,DurWeeks:null},
+  {Title:'Gantt Schedule',ToolId:'gantt-schedule',Category:'Planner',Description:'Multi-pronged planning tool feeding capacity dashboards and project progress.',Adoption:95,Impact:90,Effort:2,Status:'Mocked Up',Dependencies:'',SortOrder:1,SchedWeek:0,DurWeeks:null},
+  {Title:'Selections Procurement Tracker',ToolId:'selections-tracker',Category:'Tracker',Description:'Ordering deadlines, delivery status. Component of Selections Toolkit.',Adoption:60,Impact:90,Effort:2,Status:'Conceived',Dependencies:'',SortOrder:2,SchedWeek:0,DurWeeks:null},
+  {Title:'Design Capacity Dashboard',ToolId:'design-capacity',Category:'Dashboard',Description:'Designer workload heat map across team and timeline.',Adoption:90,Impact:88,Effort:2,Status:'Conceived',Dependencies:'',SortOrder:3,SchedWeek:0,DurWeeks:null},
+  {Title:'Project Progress Dashboard',ToolId:'progress-dashboard',Category:'Dashboard',Description:'Pipeline progression across IDEA, FDDA, and CA milestones.',Adoption:80,Impact:87,Effort:2,Status:'Conceived',Dependencies:'',SortOrder:4,SchedWeek:0,DurWeeks:null},
+  {Title:'Production Capacity Dashboard',ToolId:'production-capacity',Category:'Dashboard',Description:'PM and field team workload visibility.',Adoption:90,Impact:85,Effort:2,Status:'Conceived',Dependencies:'',SortOrder:5,SchedWeek:0,DurWeeks:null},
+  {Title:'Absolutes Matrix',ToolId:'absolutes',Category:'Tracker',Description:'Weekly pre-construction status across permits, engineering, zoning, milestones.',Adoption:100,Impact:84,Effort:2,Status:'Deployed',Dependencies:'',SortOrder:6,SchedWeek:0,DurWeeks:null},
+  {Title:'Selections Tool',ToolId:'selections-tool',Category:'Toolkit',Description:'Edit, Share, Track modes. Budget tracking, allowance governors, client presentation views.',Adoption:55,Impact:82,Effort:2,Status:'Mocked Up',Dependencies:'',SortOrder:7,SchedWeek:0,DurWeeks:null},
+  {Title:'Permit Tracker',ToolId:'permit-tracker',Category:'Tracker',Description:'Portfolio-aware permit status. Jurisdiction checklists, time-based tracking.',Adoption:80,Impact:78,Effort:2,Status:'Mocked Up',Dependencies:'',SortOrder:8,SchedWeek:0,DurWeeks:null},
+  {Title:'Revenue & Pipeline Dashboard',ToolId:'revenue-dashboard',Category:'Dashboard',Description:'Contract values + phase timing + resource allocation.',Adoption:70,Impact:72,Effort:2,Status:'Conceived',Dependencies:'',SortOrder:9,SchedWeek:0,DurWeeks:null},
+  {Title:'DA Contract Generator',ToolId:'da-contract',Category:'Toolkit',Description:'Design Agreement assembly from HubSpot, Trello, past contracts, P&L data.',Adoption:75,Impact:75,Effort:2,Status:'Conceived',Dependencies:'',SortOrder:10,SchedWeek:0,DurWeeks:null},
+  {Title:'CA Contract Generator',ToolId:'ca-contract',Category:'Toolkit',Description:'Construction Agreement assembly. Inherits from DA, adds construction provisions.',Adoption:75,Impact:75,Effort:2,Status:'Conceived',Dependencies:'',SortOrder:11,SchedWeek:0,DurWeeks:null},
+  {Title:'Levels of Development Tool',ToolId:'levels-of-dev',Category:'Toolkit',Description:'Risk-driven pre-construction scoping of development levels.',Adoption:50,Impact:60,Effort:2,Status:'Conceived',Dependencies:'',SortOrder:12,SchedWeek:0,DurWeeks:null},
+  {Title:'Sankey Financial Dashboards',ToolId:'sankey-dashboards',Category:'Dashboard',Description:'Financial flow visualization for P&Ls, selections/allowances, cost distribution.',Adoption:60,Impact:65,Effort:2,Status:'Conceived',Dependencies:'',SortOrder:13,SchedWeek:0,DurWeeks:null},
+  {Title:'Project Analyzer',ToolId:'project-analyzer',Category:'Analyzer',Description:'Project & team health via distributed assessments. Alert thresholds.',Adoption:70,Impact:55,Effort:2,Status:'Built',Dependencies:'',SortOrder:14,SchedWeek:0,DurWeeks:null},
+  {Title:'Client Analyzer',ToolId:'client-analyzer',Category:'Analyzer',Description:'Client vibe metric for qualifying new clients against primary demographic.',Adoption:90,Impact:55,Effort:2,Status:'Conceived',Dependencies:'',SortOrder:15,SchedWeek:0,DurWeeks:null},
+  {Title:'People Analyzer',ToolId:'people-analyzer',Category:'Analyzer',Description:'EOS quarterly people reviews. Core values + GWC, consensus, reports.',Adoption:50,Impact:50,Effort:2,Status:'Deployed',Dependencies:'',SortOrder:16,SchedWeek:0,DurWeeks:null},
+  {Title:'Maps Dashboard',ToolId:'maps-dashboard',Category:'Dashboard',Description:'Permits & jurisdictions, job locations, PM assignments, marketing territories.',Adoption:70,Impact:50,Effort:2,Status:'Mocked Up',Dependencies:'',SortOrder:17,SchedWeek:0,DurWeeks:null},
+  {Title:'Trades Analyzer',ToolId:'trades-analyzer',Category:'Analyzer',Description:'Subcontractor performance evaluation.',Adoption:40,Impact:40,Effort:2,Status:'Conceived',Dependencies:'',SortOrder:18,SchedWeek:0,DurWeeks:null},
+  {Title:'CORE System Dashboard',ToolId:'core-system-dashboard',Category:'Dashboard',Description:'Live SharePoint list status by build phase.',Adoption:30,Impact:25,Effort:2,Status:'Conceived',Dependencies:'',SortOrder:19,SchedWeek:0,DurWeeks:null},
+  {Title:'Timecard Analyzer',ToolId:'timecard-analyzer',Category:'Analyzer',Description:'Biweekly hour classification, Ninety.io KPIs, Project Registry.',Adoption:90,Impact:12,Effort:2,Status:'Deployed',Dependencies:'',SortOrder:20,SchedWeek:0,DurWeeks:null},
+];
+
+async function doProvision() {
+  const btn = document.getElementById('btnProvision');
+  btn.disabled = true;
+  const basePath = '/sites/' + siteId + '/lists';
+
+  // ── Step 2: Create list and columns ──
+  try {
+    setStep(2, 'active', 'Creating list...');
+    log('Creating CORE_Tools list...');
+
+    // Create the list
+    const listDef = {
+      displayName: CONFIG.listName,
+      list: { template: 'genericList' }
+    };
+    const listResp = await graphPost(basePath, listDef);
+    const listId = listResp.id;
+    log('List created: ' + listId, 'log-ok');
+
+    // Add columns one at a time
+    const colPath = basePath + '/' + listId + '/columns';
+    for (let i = 0; i < COLUMNS.length; i++) {
+      const col = COLUMNS[i];
+      log('  Adding column: ' + col.name + '...');
+      try {
+        await graphPost(colPath, col);
+        log('  ✓ ' + col.name, 'log-ok');
+      } catch (colErr) {
+        // If column already exists, that's fine
+        if (colErr.message.includes('already exists') || colErr.message.includes('nameAlreadyExists')) {
+          log('  ⚠ ' + col.name + ' already exists, skipping', 'log-warn');
+        } else {
+          throw colErr;
+        }
+      }
+    }
+
+    setStep(2, 'done', 'List created with ' + COLUMNS.length + ' custom columns');
+    log('All columns created.', 'log-ok');
+
+    // ── Step 3: Seed data ──
+    setStep(3, 'active', 'Inserting records...');
+    log('Populating seed data (' + SEED_DATA.length + ' items)...');
+
+    const itemPath = basePath + '/' + listId + '/items';
+    let ok = 0, fail = 0;
+    for (let i = 0; i < SEED_DATA.length; i++) {
+      const item = SEED_DATA[i];
+      try {
+        // Build fields object — Graph API uses fields.ColumnName
+        const fields = {};
+        Object.keys(item).forEach(function(k) {
+          if (item[k] !== null && item[k] !== undefined) fields[k] = item[k];
+        });
+        await graphPost(itemPath, { fields: fields });
+        ok++;
+        if (ok % 5 === 0 || ok === SEED_DATA.length) {
+          log('  Inserted ' + ok + '/' + SEED_DATA.length + '...', 'log-ok');
+        }
+      } catch (itemErr) {
+        fail++;
+        log('  ✗ Failed: ' + item.Title + ' — ' + itemErr.message, 'log-err');
+      }
+    }
+
+    setStep(3, 'done', ok + ' items inserted' + (fail > 0 ? ', ' + fail + ' failed' : ''));
+    log('Done! ' + ok + ' items inserted, ' + fail + ' failed.', ok === SEED_DATA.length ? 'log-ok' : 'log-warn');
+
+    document.getElementById('summary').style.display = 'block';
+
+  } catch (err) {
+    log('Provisioning error: ' + err.message, 'log-err');
+    const step = err.message.includes('column') ? 2 : (err.message.includes('item') ? 3 : 2);
+    setStep(step, 'error', err.message.substring(0, 100));
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
