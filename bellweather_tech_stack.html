@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tech Stack Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    color: #1F2937;
+    background: #F8F9FA;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .app-header {
+    background: #0F2340;
+    color: #fff;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; padding: 10px 0; }
+  .header-logo { height: 44px; object-fit: contain; }
+  .header-subtitle-text {
+    font-size: 12px; color: rgba(255,255,255,0.55);
+    margin-top: 2px;
+  }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .sync-status {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  .sync-ok    { background: rgba(52,211,153,0.15); color: #34D399; }
+  .sync-saving { background: rgba(251,191,36,0.15); color: #FBB824; }
+  .sync-error { background: rgba(239,68,68,0.15);  color: #EF4444; }
+  .sync-offline { background: rgba(156,163,175,0.15); color: #9CA3AF; }
+  .auth-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: none; cursor: pointer;
+    background: #C9A84C; color: #0F2340;
+    transition: opacity 0.15s;
+  }
+  .auth-btn:hover { opacity: 0.88; }
+  .user-pill {
+    font-size: 12px; color: rgba(255,255,255,0.65);
+  }
+
+  /* ── Main ── */
+  .main { max-width: 960px; margin: 0 auto; padding: 28px 20px; }
+
+  .page-title {
+    font-family: 'Fraunces', serif;
+    font-size: 26px; font-weight: 700; color: #0F2340;
+    margin-bottom: 4px;
+  }
+  .subtitle { font-size: 13px; color: #6B7280; margin-bottom: 22px; }
+  .subtitle strong { color: #1B5E40; }
+  .subtitle .avail { color: #B8860B; }
+
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 20px; align-items: center;
+  }
+  .divider { width: 1px; height: 20px; background: #D1D5DB; margin: 0 4px; }
+  button {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+    padding: 8px 18px; border-radius: 6px;
+    cursor: pointer; transition: all 0.15s ease;
+  }
+  .btn-view { border: 1px solid #D1D5DB; background: #fff; color: #374151; }
+  .btn-view.active { border: none; background: #0F2340; color: #fff; }
+  .btn-add { border: 1px dashed #9CA3AF; background: #FAFAFA; color: #6B7280; }
+  .btn-add:hover { background: #F3F4F6; border-color: #6B7280; }
+  .btn-action { border: 1px solid #D1D5DB; background: #fff; color: #374151; }
+  .btn-action:hover { background: #F9FAFB; }
+
+  /* ── Table ── */
+  .table-wrap { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    text-align: center; padding: 12px 8px;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: #9CA3AF; border-bottom: 2px solid #E5E7EB;
+    background: #FAFAFA;
+  }
+  th:first-child { text-align: left; padding-left: 16px; width: 280px; }
+  th.dept-col { width: 110px; min-width: 90px; }
+
+  .cat-row td {
+    padding: 20px 16px 6px;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .cat-label { display: inline-block; padding: 2px 10px; border-radius: 4px; }
+
+  .tool-row { transition: background-color 0.1s ease; }
+  .tool-row:hover { background-color: #F9FAFB; }
+  .tool-name-cell { padding: 10px 16px; border-bottom: 1px solid #E5E7EB; vertical-align: middle; }
+  .tool-name { font-weight: 600; color: #1F2937; }
+  .tool-desc { font-size: 12px; color: #9CA3AF; margin-top: 1px; }
+
+  .status-cell {
+    text-align: center; cursor: pointer;
+    font-size: 18px; font-weight: 700;
+    padding: 10px 0; border-bottom: 1px solid #E5E7EB;
+    user-select: none; transition: all 0.15s ease;
+  }
+  .status-active    { background: #1B5E40; color: #fff; }
+  .status-available { background: #FFF8E1; color: #B8860B; }
+  .status-none      { background: transparent; color: #ccc; }
+
+  .remove-btn {
+    border: none; background: none; cursor: pointer;
+    color: transparent; font-size: 16px; padding: 4px;
+    transition: color 0.15s;
+  }
+  .tool-row:hover .remove-btn { color: #EF4444; }
+
+
+
+  /* ── Export ── */
+  .export-area { margin-top: 20px; }
+  .export-area textarea {
+    width: 100%; height: 200px;
+    font-family: 'Courier New', monospace; font-size: 12px;
+    padding: 12px; border: 1px solid #D1D5DB; border-radius: 8px;
+    resize: vertical; background: #F9FAFB;
+  }
+  .export-label { font-size: 13px; color: #6B7280; margin-bottom: 6px; }
+
+  /* ── Modal ── */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .modal {
+    background: #fff; border-radius: 12px; padding: 28px;
+    width: 400px; max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .modal h3 { font-family: 'Fraunces', serif; font-size: 18px; color: #0F2340; margin-bottom: 20px; }
+  .modal label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+  .modal input, .modal select {
+    width: 100%; padding: 10px 12px;
+    border: 1px solid #D1D5DB; border-radius: 6px;
+    font-size: 14px; font-family: 'DM Sans', sans-serif;
+    outline: none; margin-bottom: 14px;
+  }
+  .modal input:focus, .modal select:focus { border-color: #0F2340; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+  .btn-cancel {
+    padding: 8px 20px; border: 1px solid #D1D5DB; border-radius: 6px;
+    background: #fff; color: #374151; cursor: pointer;
+    font-size: 14px; font-family: 'DM Sans', sans-serif;
+  }
+  .btn-confirm {
+    padding: 8px 20px; border: none; border-radius: 6px;
+    background: #0F2340; color: #fff; cursor: pointer;
+    font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Loading ── */
+  .loading-screen {
+    position: fixed; inset: 0; background: #F8F9FA;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; z-index: 200;
+  }
+  .loading-logo {
+    width: 56px; height: 56px; background: #C9A84C;
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-size: 28px; font-weight: 700;
+    color: #0F2340; margin-bottom: 20px;
+  }
+  .loading-text { font-size: 14px; color: #6B7280; }
+  .spinner {
+    width: 28px; height: 28px; border: 3px solid #E5E7EB;
+    border-top-color: #0F2340; border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 12px auto 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #exportArea { display: none; }
+
+  /* ── Admin Toggle ── */
+  .toggle {
+    position: relative;
+    width: 40px; height: 22px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0.2);
+    border-radius: 11px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute; top: 3px; left: 3px;
+    width: 16px; height: 16px;
+    background: #fff; border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+  }
+  .toggle input:checked + .toggle-track { background: #DC2626; }
+  .toggle input:checked + .toggle-track::after { transform: translateX(18px); }
+
+
+  /* Read-only state — hide interactive elements when admin panel closed */
+  body:not(.admin-open) .remove-btn { display: none !important; }
+  body:not(.admin-open) .status-cell { cursor: default !important; }
+  body:not(.admin-open) .btn-add { display: none !important; }
+  body.admin-open .tool-row:hover .remove-btn { color: #EF4444; }
+
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">B</div>
+  <div class="loading-text" id="loadingMsg">Signing in…</div>
+  <div class="spinner"></div>
+</div>
+
+<!-- Header -->
+<div class="app-header">
+  <div class="header-left">
+    <div style="display:flex;flex-direction:column;align-items:flex-start;">
+      <img class="header-logo" src="data:image/png;base64,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" alt="Bellweather">
+      <div class="header-subtitle-text">Tech Stack Tracker</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-left:8px;padding-left:16px;border-left:1px solid rgba(255,255,255,0.15);">
+      <label class="toggle" style="transform:scale(0.9);">
+        <input type="checkbox" id="adminPanelToggle" onchange="toggleAdminPanel()">
+        <span class="toggle-track"></span>
+      </label>
+      <span style="font-size:20px;cursor:pointer;opacity:0.8;" title="Edit Mode" onclick="document.getElementById('adminPanelToggle').click()">⚙️</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="sync-status sync-offline" id="syncStatus">Not connected</span>
+    <span class="user-pill" id="userPill"></span>
+    <button class="auth-btn" id="authBtn" onclick="handleAuthClick()">Sign In</button>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main" id="mainContent" style="display:none">
+  <h1 class="page-title">Tech Stack Tracker</h1>
+  <p class="subtitle">Click any status cell to cycle: <strong>✓ Active</strong> · <span class="avail">○ Has Access</span> · — Not Used</p>
+
+  <div class="toolbar">
+    <button class="btn-add" onclick="showAddModal()">+ Add Tool</button>
+    <span class="divider"></span>
+    <button class="btn-action" onclick="showExport()">📋 Export Data</button>
+  </div>
+
+  <div class="table-wrap" id="matrixView">
+    <table>
+      <thead>
+        <tr>
+          <th>Tool</th>
+          <th class="dept-col">Operations</th>
+          <th class="dept-col">Sales</th>
+          <th class="dept-col">D&amp;D</th>
+          <th class="dept-col">Production</th>
+          <th style="width:36px"></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+
+  <div id="exportArea" class="export-area">
+    <p class="export-label">Select all text below (Ctrl+A / Cmd+A inside the box) and paste into Excel or Sheets — tabs map to columns automatically.</p>
+    <textarea id="exportText"></textarea>
+  </div>
+
+</div>
+
+<!-- Add Tool Modal -->
+<div class="modal-bg" id="addModal" style="display:none" onclick="hideAddModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3>Add Tool</h3>
+    <label>Tool Name</label>
+    <input type="text" id="newName" placeholder="e.g., Monday.com">
+    <label>Category</label>
+    <select id="newCategory"></select>
+    <div id="customCatWrap" style="display:none">
+      <label>New Category Name</label>
+      <input type="text" id="newCustomCat" placeholder="Category name">
+    </div>
+    <label>Description</label>
+    <input type="text" id="newDesc" placeholder="Brief description">
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="hideAddModal()">Cancel</button>
+      <button class="btn-confirm" onclick="addTool()">Add Tool</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  CONFIG — update SharePoint site ID if needed
+// ─────────────────────────────────────────────
+const CONFIG = {
+  clientId:  "84b37f0e-b149-4089-9bdc-fc654715db23",
+  tenantId:  "ff0e3f46-615a-4a22-8a80-4bb83d627785",
+  siteUrl:   "bellweather.sharepoint.com:/sites/BWCore",
+  listName:  "TechStack",
+  cacheKey:  "bw_techstack_cache",
+};
+
+const GRAPH_BASE = `https://graph.microsoft.com/v1.0/sites/${CONFIG.siteUrl}:/lists/${CONFIG.listName}/items`;
+const GRAPH_FIELDS = "?expand=fields(select=Title,Category,ToolDescription,Operations,Sales,DD,Production,SortOrder)";
+
+// ─────────────────────────────────────────────
+//  MSAL Setup
+// ─────────────────────────────────────────────
+const msalConfig = {
+  auth: {
+    clientId: CONFIG.clientId,
+    authority: `https://login.microsoftonline.com/${CONFIG.tenantId}`,
+    redirectUri: window.location.origin + window.location.pathname,
+  },
+  cache: { cacheLocation: "localStorage", storeAuthStateInCookie: false }
+};
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+const loginRequest = { scopes: ["Sites.ReadWrite.All"] };
+
+let currentAccount = null;
+let accessToken    = null;
+
+// ─────────────────────────────────────────────
+//  Data
+// ─────────────────────────────────────────────
+const DEPTS   = ["Operations", "Sales", "D&D", "Production"];
+const SP_COLS = ["Operations", "Sales", "DD", "Production"]; // SharePoint column names
+const STATUSES = ["none", "active", "available"];
+const STATUS_SYMBOLS = { active: "✓", available: "○", none: "" };
+
+const CAT_COLORS = {
+  "Communication":      { bg: "#E8F4FD", border: "#4A90D9", text: "#2C5F8A" },
+  "Project Management": { bg: "#FFF3E0", border: "#E8A848", text: "#8A6420" },
+  "Data & Storage":     { bg: "#E8F5E9", border: "#66BB6A", text: "#2E7D32" },
+  "Operations":         { bg: "#F3E5F5", border: "#AB47BC", text: "#6A1B9A" },
+  "Sales":              { bg: "#FFF8E1", border: "#FFB300", text: "#7A5C00" },
+  "Design":             { bg: "#FCE4EC", border: "#EC407A", text: "#AD1457" },
+  "Marketing":          { bg: "#E0F7FA", border: "#26C6DA", text: "#00838F" },
+};
+const DEFAULT_CAT = { bg: "#F5F5F5", border: "#9E9E9E", text: "#616161" };
+
+// tools array: { id, name, category, description, sortOrder, departments:{Operations,Sales,D&D,Production} }
+let tools = [];
+let saveTimers = {};  // keyed by tool id for debounced PATCH
+
+// ─────────────────────────────────────────────
+//  Auth
+// ─────────────────────────────────────────────
+async function initAuth() {
+  try {
+    const resp = await msalInstance.handleRedirectPromise();
+    if (resp) {
+      currentAccount = resp.account;
+      msalInstance.setActiveAccount(currentAccount);
+    } else {
+      const accounts = msalInstance.getAllAccounts();
+      if (accounts.length > 0) {
+        currentAccount = accounts[0];
+        msalInstance.setActiveAccount(currentAccount);
+      }
+    }
+
+    if (currentAccount) {
+      await acquireToken();
+      updateAuthUI(true);
+      await loadFromSharePoint();
+    } else {
+      // try silent first, redirect if needed
+      try {
+        const silentResp = await msalInstance.ssoSilent(loginRequest);
+        currentAccount = silentResp.account;
+        msalInstance.setActiveAccount(currentAccount);
+        accessToken = silentResp.accessToken;
+        updateAuthUI(true);
+        await loadFromSharePoint();
+      } catch {
+        // No existing session — show sign-in
+        hideLoading();
+        updateAuthUI(false);
+        loadFromCache(); // load offline copy if available
+        showMain();
+      }
+    }
+  } catch (err) {
+    console.error("Auth init error:", err);
+    hideLoading();
+    updateAuthUI(false);
+    loadFromCache();
+    showMain();
+  }
+}
+
+async function acquireToken() {
+  try {
+    const resp = await msalInstance.acquireTokenSilent({ ...loginRequest, account: currentAccount });
+    accessToken = resp.accessToken;
+  } catch {
+    // Silent failed — redirect
+    await msalInstance.acquireTokenRedirect(loginRequest);
+  }
+}
+
+function handleAuthClick() {
+  if (currentAccount) {
+    msalInstance.logoutRedirect();
+  } else {
+    msalInstance.loginRedirect(loginRequest);
+  }
+}
+
+function updateAuthUI(signedIn) {
+  const btn  = document.getElementById("authBtn");
+  const pill = document.getElementById("userPill");
+  if (signedIn && currentAccount) {
+    btn.textContent = "Sign Out";
+    pill.textContent = currentAccount.name || currentAccount.username;
+  } else {
+    btn.textContent = "Sign In";
+    pill.textContent = "";
+  }
+}
+
+// ─────────────────────────────────────────────
+//  SharePoint CRUD
+// ─────────────────────────────────────────────
+async function loadFromSharePoint() {
+  setSyncStatus("saving", "Loading…");
+  try {
+    const resp = await fetch(GRAPH_BASE + GRAPH_FIELDS + "&$orderby=fields/SortOrder asc&$top=500", {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    tools = data.value.map(item => ({
+      id:          item.id,
+      name:        item.fields.Title        || "",
+      category:    item.fields.Category     || "Other",
+      description: item.fields.ToolDescription || "",
+      sortOrder:   item.fields.SortOrder    || 0,
+      departments: {
+        "Operations": item.fields.Operations || "none",
+        "Sales":      item.fields.Sales      || "none",
+        "D&D":        item.fields.DD         || "none",
+        "Production": item.fields.Production || "none",
+      }
+    }));
+    saveToCache();
+    setSyncStatus("ok", "Synced");
+    hideLoading();
+    showMain();
+    render();
+  } catch (err) {
+    console.error("Load error:", err);
+    setSyncStatus("error", "Load failed");
+    loadFromCache();
+    hideLoading();
+    showMain();
+  }
+}
+
+async function patchTool(tool) {
+  if (!accessToken) return;
+  setSyncStatus("saving", "Saving…");
+  try {
+    const body = {
+      fields: {
+        Title:           tool.name,
+        Category:        tool.category,
+        ToolDescription: tool.description,
+        Operations:      tool.departments["Operations"],
+        Sales:           tool.departments["Sales"],
+        DD:              tool.departments["D&D"],
+        Production:      tool.departments["Production"],
+        SortOrder:       tool.sortOrder,
+      }
+    };
+    const resp = await fetch(`${GRAPH_BASE}/${tool.id}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    setSyncStatus("ok", "Saved");
+    saveToCache();
+  } catch (err) {
+    console.error("Patch error:", err);
+    setSyncStatus("error", "Save failed");
+  }
+}
+
+async function createTool(tool) {
+  if (!accessToken) {
+    // Offline — assign temp id
+    tool.id = "local_" + Date.now();
+    tools.push(tool);
+    saveToCache();
+    render();
+    return;
+  }
+  setSyncStatus("saving", "Saving…");
+  try {
+    const body = {
+      fields: {
+        Title:           tool.name,
+        Category:        tool.category,
+        ToolDescription: tool.description,
+        Operations:      tool.departments["Operations"],
+        Sales:           tool.departments["Sales"],
+        DD:              tool.departments["D&D"],
+        Production:      tool.departments["Production"],
+        SortOrder:       tool.sortOrder,
+      }
+    };
+    const resp = await fetch(GRAPH_BASE, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const created = await resp.json();
+    tool.id = created.id;
+    tools.push(tool);
+    saveToCache();
+    setSyncStatus("ok", "Saved");
+    render();
+  } catch (err) {
+    console.error("Create error:", err);
+    setSyncStatus("error", "Save failed");
+    tool.id = "local_" + Date.now();
+    tools.push(tool);
+    render();
+  }
+}
+
+async function deleteTool(idx) {
+  const tool = tools[idx];
+  tools.splice(idx, 1);
+  render();
+  saveToCache();
+  if (!accessToken || !tool.id || tool.id.startsWith("local_")) return;
+  setSyncStatus("saving", "Deleting…");
+  try {
+    const resp = await fetch(`${GRAPH_BASE}/${tool.id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    setSyncStatus("ok", "Deleted");
+  } catch (err) {
+    console.error("Delete error:", err);
+    setSyncStatus("error", "Delete failed");
+  }
+}
+
+// Debounced save — 800ms after last change
+function scheduleSave(tool) {
+  if (saveTimers[tool.id]) clearTimeout(saveTimers[tool.id]);
+  saveTimers[tool.id] = setTimeout(() => {
+    if (tool.id && !tool.id.startsWith("local_")) {
+      patchTool(tool);
+    }
+  }, 800);
+  setSyncStatus("saving", "Unsaved…");
+  saveToCache(); // always keep cache current
+}
+
+// ─────────────────────────────────────────────
+//  Local cache (offline fallback)
+// ─────────────────────────────────────────────
+function saveToCache() {
+  try { localStorage.setItem(CONFIG.cacheKey, JSON.stringify(tools)); } catch {}
+}
+function loadFromCache() {
+  try {
+    const raw = localStorage.getItem(CONFIG.cacheKey);
+    if (raw) {
+      tools = JSON.parse(raw);
+      setSyncStatus("offline", "Offline cache");
+      render();
+    } else {
+      loadSeedData();
+    }
+  } catch {
+    loadSeedData();
+  }
+}
+
+// Seed data — only used when no cache and no SharePoint connection
+function loadSeedData() {
+  tools = [
+    { id: null, sortOrder: 10,  name: "Email / Outlook",   category: "Communication",      description: "Client-facing communication",                     departments: { Operations: "active", Sales: "active", "D&D": "active", Production: "active" } },
+    { id: null, sortOrder: 20,  name: "Trello",            category: "Communication",      description: "Project management, internal communication",        departments: { Operations: "active", Sales: "active", "D&D": "active", Production: "active" } },
+    { id: null, sortOrder: 30,  name: "Teams",             category: "Communication",      description: "Quick, informal desk chats",                        departments: { Operations: "available", Sales: "available", "D&D": "active", Production: "available" } },
+    { id: null, sortOrder: 40,  name: "BuilderTrend",      category: "Project Management", description: "CRM, project tracking, billing, contracts",         departments: { Operations: "active", Sales: "active", "D&D": "active", Production: "active" } },
+    { id: null, sortOrder: 50,  name: "Square Takeoff",    category: "Project Management", description: "Online tool for rapid, accurate, shareable takeoffs",departments: { Operations: "available", Sales: "available", "D&D": "available", Production: "active" } },
+    { id: null, sortOrder: 60,  name: "SharePoint",        category: "Data & Storage",     description: "Central data repository and archive",               departments: { Operations: "active", Sales: "active", "D&D": "active", Production: "active" } },
+    { id: null, sortOrder: 70,  name: "Ninety.io",         category: "Operations",         description: "Meeting management, EOS facilitation",              departments: { Operations: "active", Sales: "active", "D&D": "active", Production: "active" } },
+    { id: null, sortOrder: 80,  name: "Employee Navigator",category: "Operations",         description: "Employee benefits portal",                          departments: { Operations: "active", Sales: "none", "D&D": "none", Production: "none" } },
+    { id: null, sortOrder: 90,  name: "HubSpot",           category: "Sales",              description: "Sales CRM",                                         departments: { Operations: "none", Sales: "active", "D&D": "none", Production: "none" } },
+    { id: null, sortOrder: 100, name: "Chief Architect",   category: "Design",             description: "Design plans",                                      departments: { Operations: "none", Sales: "none", "D&D": "active", Production: "none" } },
+    { id: null, sortOrder: 110, name: "InDesign",          category: "Design",             description: "Templates for presentations",                       departments: { Operations: "none", Sales: "none", "D&D": "active", Production: "none" } },
+    { id: null, sortOrder: 120, name: "Squarespace",       category: "Marketing",          description: "Website hosting",                                   departments: { Operations: "none", Sales: "active", "D&D": "none", Production: "none" } },
+  ];
+  render();
+}
+
+// ─────────────────────────────────────────────
+//  UI Helpers
+// ─────────────────────────────────────────────
+function setSyncStatus(state, text) {
+  const el = document.getElementById("syncStatus");
+  el.className = "sync-status sync-" + state;
+  el.textContent = text;
+}
+function hideLoading() {
+  document.getElementById("loadingScreen").style.display = "none";
+}
+function showMain() {
+  document.getElementById("mainContent").style.display = "block";
+}
+
+// ─────────────────────────────────────────────
+//  Render
+// ─────────────────────────────────────────────
+function getCategories() {
+  const seen = [];
+  tools.forEach(t => { if (!seen.includes(t.category)) seen.push(t.category); });
+  return seen;
+}
+
+function cycleStatus(toolIdx, dept) {
+  if (!document.body.classList.contains('admin-open')) return; // view-only
+  const current = tools[toolIdx].departments[dept];
+  const next = STATUSES[(STATUSES.indexOf(current) + 1) % STATUSES.length];
+  tools[toolIdx].departments[dept] = next;
+  render();
+  scheduleSave(tools[toolIdx]);
+}
+
+function render() {
+  renderMatrix();
+  updateExport();
+}
+
+function renderMatrix() {
+  const tbody = document.getElementById("tableBody");
+  tbody.innerHTML = "";
+  let lastCat = "";
+  tools.forEach((tool, idx) => {
+    if (tool.category !== lastCat) {
+      lastCat = tool.category;
+      const colors = CAT_COLORS[tool.category] || DEFAULT_CAT;
+      const catRow = document.createElement("tr");
+      catRow.className = "cat-row";
+      catRow.innerHTML = `<td colspan="${DEPTS.length + 2}" style="color:${colors.text}"><span class="cat-label" style="background:${colors.bg};border:1px solid ${colors.border}">${tool.category}</span></td>`;
+      tbody.appendChild(catRow);
+    }
+    const tr = document.createElement("tr");
+    tr.className = "tool-row";
+    let cells = `<td class="tool-name-cell"><div class="tool-name">${tool.name}</div><div class="tool-desc">${tool.description}</div></td>`;
+    DEPTS.forEach(dept => {
+      const s = tool.departments[dept] || "none";
+      const cls = s === "active" ? "status-active" : s === "available" ? "status-available" : "status-none";
+      cells += `<td class="status-cell ${cls}" onclick="cycleStatus(${idx},'${dept}')" title="Click to change">${STATUS_SYMBOLS[s] || ""}</td>`;
+    });
+    cells += `<td style="border-bottom:1px solid #E5E7EB;text-align:center"><button class="remove-btn" onclick="deleteTool(${idx})" title="Remove">×</button></td>`;
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+}
+
+
+
+function updateExport() {
+  const header = ["Tool", "Category", "Description", ...DEPTS].join("\t");
+  const rows = tools.map(t => {
+    const label = s => s === "active" ? "Active" : s === "available" ? "Available" : "";
+    return [t.name, t.category, t.description, ...DEPTS.map(d => label(t.departments[d]))].join("\t");
+  });
+  document.getElementById("exportText").value = [header, ...rows].join("\n");
+}
+
+
+function showExport() {
+  const area = document.getElementById("exportArea");
+  area.style.display = area.style.display === "block" ? "none" : "block";
+}
+
+// ─────────────────────────────────────────────
+//  Add Tool Modal
+// ─────────────────────────────────────────────
+function showAddModal() {
+  const sel = document.getElementById("newCategory");
+  sel.innerHTML = "";
+  getCategories().forEach(c => { sel.innerHTML += `<option value="${c}">${c}</option>`; });
+  sel.innerHTML += '<option value="__custom__">+ New Category</option>';
+  sel.onchange = () => {
+    document.getElementById("customCatWrap").style.display = sel.value === "__custom__" ? "block" : "none";
+  };
+  document.getElementById("newName").value    = "";
+  document.getElementById("newDesc").value    = "";
+  document.getElementById("newCustomCat").value = "";
+  document.getElementById("customCatWrap").style.display = "none";
+  document.getElementById("addModal").style.display = "flex";
+  document.getElementById("newName").focus();
+}
+
+function hideAddModal() {
+  document.getElementById("addModal").style.display = "none";
+}
+
+function addTool() {
+  const name = document.getElementById("newName").value.trim();
+  if (!name) return;
+  const catSel   = document.getElementById("newCategory").value;
+  const category = catSel === "__custom__"
+    ? (document.getElementById("newCustomCat").value.trim() || "Other")
+    : catSel;
+  const desc = document.getElementById("newDesc").value.trim();
+
+  // sortOrder: place after last item in category, or at end
+  const catTools = tools.filter(t => t.category === category);
+  const maxSort  = catTools.length ? Math.max(...catTools.map(t => t.sortOrder || 0)) : (tools.length * 10);
+  const newTool = {
+    id: null,
+    name, category,
+    description: desc,
+    sortOrder: maxSort + 10,
+    departments: { Operations: "none", Sales: "none", "D&D": "none", Production: "none" }
+  };
+
+  hideAddModal();
+  createTool(newTool);
+}
+
+// ─────────────────────────────────────────────
+//  Edit Mode Toggle
+// ─────────────────────────────────────────────
+function toggleAdminPanel() {
+  const on = document.getElementById('adminPanelToggle').checked;
+  document.body.classList.toggle('admin-open', on);
+}
+
+// ─────────────────────────────────────────────
+//  Boot
+// ─────────────────────────────────────────────
+document.getElementById("loadingMsg").textContent = "Signing in…";
+
+// Hard safety net: if anything prevents normal boot, force content visible after 4s
+const bootTimeout = setTimeout(() => {
+  hideLoading();
+  loadFromCache();
+  showMain();
+}, 4000);
+
+async function boot() {
+  try {
+    await initAuth();
+  } catch(e) {
+    hideLoading();
+    loadFromCache();
+    showMain();
+  } finally {
+    clearTimeout(bootTimeout);
+  }
+}
+boot();
+</script>
+</body>
+</html>
