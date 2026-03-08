@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bellweather – Projects Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<style>
+:root{
+  --navy:#1F2E3E;--slate:#3d4f6f;--steel:#6b7d9e;--silver:#a8b5cc;
+  --cloud:#dde3ed;--snow:#f4f6f9;--white:#ffffff;
+  --gold:#C9A84C;--gold-light:#f5e6cc;--gold-dim:rgba(201,168,76,0.12);
+  --green:#2d8a5e;--green-bg:#e8f5ee;
+  --amber:#c17a2a;--amber-bg:#fdf3e4;
+  --red:#b94444;--red-bg:#fce8e8;
+  --blue:#4a90c4;--blue-bg:#e8f4fd;
+  --radius:8px;
+  --shadow:0 1px 3px rgba(26,39,68,0.08),0 4px 12px rgba(26,39,68,0.05);
+  --shadow-lg:0 4px 12px rgba(26,39,68,0.1),0 12px 32px rgba(26,39,68,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--snow);color:var(--navy);min-height:100vh;}
+.header{background:var(--navy);padding:0 32px;display:flex;align-items:stretch;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.18);position:sticky;top:0;z-index:200;}
+.header-left{display:flex;align-items:center;gap:16px;padding:12px 0;}
+.header-logo{height:44px;width:auto;object-fit:contain;flex-shrink:0;}
+.header-divider{width:1px;height:28px;background:rgba(255,255,255,0.18);}
+.header-title{font-family:'Fraunces',serif;font-size:22px;font-weight:400;letter-spacing:1px;color:white;line-height:1.1;}
+.header-title em{font-style:italic;font-weight:300;}
+.header-subtitle{font-size:10px;font-weight:500;color:var(--silver);text-transform:uppercase;letter-spacing:2px;margin-top:2px;}
+.header-right{display:flex;align-items:center;gap:10px;padding:0 0 0 16px;}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--silver);flex-shrink:0;transition:background 0.3s;}
+.conn-label{font-size:11px;font-weight:600;letter-spacing:0.5px;color:var(--silver);white-space:nowrap;transition:color 0.3s;}
+.btn-signin{font-size:11px;padding:5px 14px;color:var(--gold);border:1.5px solid var(--gold);border-radius:6px;cursor:pointer;font-weight:600;background:none;}
+.btn-signin:hover{background:rgba(201,168,76,0.12);}
+.tabs{display:flex;}
+.tab{padding:20px 24px;font-size:12px;font-weight:600;color:var(--silver);cursor:pointer;border-bottom:3px solid transparent;text-transform:uppercase;letter-spacing:1.2px;transition:all 0.2s;}
+.tab:hover{color:white;}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.main{max-width:1100px;margin:0 auto;padding:28px 24px;}
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:20px;}
+.card-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--cloud);flex-wrap:wrap;}
+.card-title{font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--navy);}
+.btn{padding:9px 20px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;border:none;letter-spacing:0.3px;}
+.btn-primary{background:var(--gold);color:var(--navy);}
+.btn-primary:hover{background:#b8942e;}
+.btn-secondary{background:var(--snow);color:var(--navy);border:1.5px solid var(--cloud);}
+.btn-secondary:hover{border-color:var(--silver);}
+.btn-sm{font-size:12px;padding:5px 12px;}
+.btn-ghost{background:none;border:1.5px dashed var(--cloud);color:var(--steel);font-size:13px;font-weight:600;padding:9px 20px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ── PROJECTS TAB ── */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.search-wrap{position:relative;flex:1;min-width:180px;}
+.search-input{width:100%;border:1.5px solid var(--cloud);border-radius:6px;padding:8px 12px 8px 32px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--navy);background:var(--white);transition:border-color 0.15s;}
+.search-input:focus{outline:none;border-color:var(--gold);}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--silver);font-size:13px;pointer-events:none;}
+.filter-pills{display:flex;gap:5px;flex-wrap:wrap;}
+.pill{padding:4px 11px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;border:1.5px solid var(--cloud);background:var(--white);color:var(--steel);transition:all 0.15s;text-transform:uppercase;letter-spacing:0.5px;}
+.pill:hover{border-color:var(--silver);}
+.pill.active-pill{color:white;border-color:var(--navy);background:var(--navy);}
+.pill[data-s="Lead"].active-pill{background:var(--blue-bg);color:var(--blue);border-color:var(--blue);}
+.pill[data-s="IDEA"].active-pill{background:var(--amber-bg);color:var(--amber);border-color:var(--amber);}
+.pill[data-s="FDDA"].active-pill{background:var(--gold-dim);color:var(--amber);border-color:var(--gold);}
+.pill[data-s="CA"].active-pill,.pill[data-s="Construction"].active-pill{background:var(--green-bg);color:var(--green);border-color:var(--green);}
+.pill[data-s="Warranty"].active-pill,.pill[data-s="Complete"].active-pill{background:var(--snow);color:var(--steel);border-color:var(--silver);}
+.pill[data-s="Lost"].active-pill{background:var(--red-bg);color:var(--red);border-color:var(--red);}
+.summary-bar{display:flex;gap:24px;flex-wrap:wrap;padding:12px 18px;background:var(--snow);border-radius:var(--radius);border:1px solid var(--cloud);margin-bottom:18px;}
+.stat label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--steel);display:block;}
+.stat .num{font-family:'Fraunces',serif;font-size:22px;font-weight:600;color:var(--navy);line-height:1.1;}
+.projects-table{width:100%;border-collapse:collapse;}
+.projects-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--steel);padding:10px 14px;text-align:left;border-bottom:2px solid var(--cloud);cursor:pointer;user-select:none;white-space:nowrap;}
+.projects-table th:hover{color:var(--navy);}
+.sort-icon{margin-left:3px;opacity:0.4;font-size:10px;}
+.projects-table th.sorted .sort-icon{opacity:1;color:var(--gold);}
+.projects-table td{padding:11px 14px;border-bottom:1px solid var(--cloud);font-size:13px;vertical-align:middle;}
+.projects-table tr.data-row{cursor:pointer;transition:background 0.1s;}
+.projects-table tr.data-row:hover td{background:var(--snow);}
+.projects-table tr.expanded-row>td{background:#fafbfd;font-weight:600;}
+.projects-table tr.detail-row td{padding:0;}
+.detail-panel{padding:20px 24px;background:#fafbfd;border-top:2px solid var(--cloud);}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px 22px;margin-bottom:16px;}
+.df label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--steel);display:block;margin-bottom:3px;}
+.df .v{font-size:13px;color:var(--navy);}
+.df .v.empty{color:var(--silver);font-style:italic;}
+.detail-notes-section{padding-top:14px;border-top:1px solid var(--cloud);}
+.detail-notes-section label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--steel);display:block;margin-bottom:6px;}
+.detail-notes-section p{font-size:13px;color:var(--navy);line-height:1.6;white-space:pre-wrap;}
+.status-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border:1px solid;white-space:nowrap;}
+.s-Lead{background:var(--blue-bg);color:var(--blue);border-color:var(--blue);}
+.s-IDEA{background:var(--amber-bg);color:var(--amber);border-color:var(--amber);}
+.s-FDDA{background:var(--gold-dim);color:var(--amber);border-color:var(--gold);}
+.s-CA,.s-Construction{background:var(--green-bg);color:var(--green);border-color:var(--green);}
+.s-Warranty,.s-Complete{background:var(--snow);color:var(--steel);border-color:var(--silver);}
+.s-Lost{background:var(--red-bg);color:var(--red);border-color:var(--red);}
+.chevron{display:inline-block;transition:transform 0.2s;font-size:11px;color:var(--silver);margin-right:4px;}
+.chevron.open{transform:rotate(90deg);color:var(--gold);}
+.empty-state{text-align:center;padding:52px 24px;color:var(--steel);}
+.empty-icon{font-size:36px;margin-bottom:12px;}
+.refresh-btn{font-size:11px;padding:5px 12px;margin-left:auto;}
+
+/* ── IMPORT TAB ── */
+.stage-bar{display:flex;align-items:center;gap:0;margin-bottom:24px;}
+.stage-step{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;color:var(--silver);}
+.stage-step.active-stage{color:var(--gold);}
+.stage-step.done-stage{color:var(--green);}
+.stage-conn{flex:1;height:2px;background:var(--cloud);}
+.stage-conn.done-conn{background:var(--green);}
+.stage-num{width:22px;height:22px;border-radius:50%;border:2px solid var(--cloud);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.stage-step.active-stage .stage-num{border-color:var(--gold);color:var(--gold);}
+.stage-step.done-stage .stage-num{border-color:var(--green);background:var(--green);color:white;}
+.drop-zone{border:2px dashed var(--cloud);border-radius:var(--radius);padding:44px 32px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--white);}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--gold);background:var(--gold-dim);}
+.drop-zone .drop-icon{font-size:36px;margin-bottom:10px;}
+.drop-zone p{font-size:14px;color:var(--steel);margin-top:8px;}
+.drop-zone .drop-hint{font-size:12px;color:var(--silver);margin-top:4px;}
+#file-input{display:none;}
+.board-meta-bar{display:flex;align-items:center;gap:16px;padding:12px 16px;background:var(--snow);border-radius:var(--radius);border:1px solid var(--cloud);margin-bottom:18px;flex-wrap:wrap;}
+.board-name-lbl{font-weight:600;font-size:14px;color:var(--navy);}
+.board-sub{font-size:12px;color:var(--steel);margin-top:1px;}
+.board-chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue);white-space:nowrap;}
+.section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--silver);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--cloud);}
+.archived-toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--steel);margin-bottom:14px;cursor:pointer;}
+.archived-toggle input{accent-color:var(--gold);width:14px;height:14px;}
+.map-table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+.map-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--steel);padding:8px 12px;text-align:left;border-bottom:2px solid var(--cloud);}
+.map-table td{padding:9px 12px;border-bottom:1px solid var(--cloud);font-size:13px;vertical-align:middle;}
+.map-table tr:last-child td{border-bottom:none;}
+.field-lbl{font-weight:600;color:var(--navy);}
+.field-type{font-size:10px;color:var(--silver);margin-top:1px;}
+.map-select{border:1.5px solid var(--cloud);border-radius:6px;padding:6px 9px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--navy);background:var(--white);min-width:190px;transition:border-color 0.15s;}
+.map-select:focus{outline:none;border-color:var(--gold);}
+.sample-val{font-size:11px;color:var(--steel);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.list-status-map{display:grid;grid-template-columns:1fr 20px 1fr;gap:8px 10px;align-items:center;padding:14px 16px;background:var(--snow);border-radius:6px;border:1px solid var(--cloud);margin-bottom:20px;}
+.list-status-map .arrow{color:var(--silver);text-align:center;font-size:13px;}
+.list-status-map label{font-size:11px;color:var(--steel);}
+.status-map-select{border:1.5px solid var(--cloud);border-radius:6px;padding:5px 8px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--navy);background:var(--white);width:100%;}
+.preview-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--cloud);margin-bottom:18px;}
+.preview-table{width:100%;border-collapse:collapse;font-size:12px;}
+.preview-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--steel);padding:8px 12px;text-align:left;border-bottom:2px solid var(--cloud);white-space:nowrap;background:var(--snow);}
+.preview-table td{padding:8px 12px;border-bottom:1px solid var(--cloud);vertical-align:middle;}
+.preview-table tr.row-skip td{opacity:0.38;}
+.preview-table tr.row-dupe td{background:#fffbf0;}
+.preview-table tr.row-dupe td:first-child{border-left:3px solid var(--amber);}
+.dupe-badge{font-size:10px;font-weight:700;color:var(--amber);background:var(--amber-bg);padding:2px 6px;border-radius:10px;border:1px solid var(--amber);white-space:nowrap;}
+.skip-btn{cursor:pointer;color:var(--silver);font-size:13px;transition:color 0.15s;}
+.skip-btn:hover{color:var(--red);}
+.action-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+.count-note{font-size:12px;color:var(--steel);}
+.import-progress{padding:18px;background:var(--snow);border-radius:var(--radius);border:1px solid var(--cloud);}
+.progress-bar-wrap{background:var(--cloud);border-radius:10px;height:8px;margin:10px 0 14px;}
+.progress-bar{height:8px;border-radius:10px;background:var(--green);transition:width 0.3s;}
+.import-log{max-height:200px;overflow-y:auto;font-size:11px;font-family:monospace;background:var(--navy);color:rgba(255,255,255,0.8);padding:12px;border-radius:6px;line-height:1.9;}
+.log-ok{color:#7dd88a;}
+.log-skip{color:var(--silver);}
+.log-err{color:#ff8080;}
+.log-warn{color:#ffcc66;}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:white;padding:12px 20px;border-radius:var(--radius);font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);transform:translateY(80px);opacity:0;transition:all 0.3s;z-index:9998;}
+.toast.show{transform:translateY(0);opacity:1;}
+@media(max-width:720px){
+  .projects-table th:nth-child(n+5),.projects-table td:nth-child(n+5){display:none;}
+  .tabs .tab{padding:16px 12px;font-size:11px;}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <img class="header-logo" src="data:image/png;base64,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" alt="Bellweather">
+    <div class="header-divider"></div>
+    <div>
+      <div class="header-title">Projects <em>Manager</em></div>
+      <div class="header-subtitle">CORE_Projects · BWCore</div>
+    </div>
+  </div>
+  <nav class="tabs">
+    <div class="tab active" onclick="switchTab('projects')">Projects</div>
+    <div class="tab" onclick="switchTab('import')">Trello Import</div>
+  </nav>
+  <div class="header-right">
+    <div class="conn-dot" id="conn-dot"></div>
+    <span class="conn-label" id="conn-label">Connecting…</span>
+    <button class="btn-signin" id="signin-btn" onclick="signIn()" style="display:none">Sign In</button>
+  </div>
+</header>
+
+<div class="main">
+
+<!-- ══════ PROJECTS TAB ══════ -->
+<div id="tab-projects">
+  <div id="projects-loading" class="card" style="display:none">
+    <div class="empty-state" style="padding:32px"><div class="empty-icon">⏳</div><p>Loading from SharePoint…</p></div>
+  </div>
+  <div id="projects-content" style="display:none">
+    <div class="summary-bar" id="summary-bar"></div>
+    <div class="card" style="padding:16px 20px">
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" class="search-input" id="search-input" placeholder="Search client, job code, address…" oninput="applyFilters()">
+        </div>
+        <button class="btn btn-secondary btn-sm refresh-btn" onclick="fetchProjects()">↺ Refresh</button>
+      </div>
+      <div class="filter-pills" id="filter-pills"></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table class="projects-table" id="projects-table">
+        <thead>
+          <tr>
+            <th style="width:22px"></th>
+            <th onclick="sortBy('ClientName')" id="th-ClientName">Client <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('JobCode')" id="th-JobCode">Job Code <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('Status')" id="th-Status">Status <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('ScopeType')" id="th-ScopeType">Scope <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('CaValue')" id="th-CaValue">CA Value <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('Address')" id="th-Address">Address <span class="sort-icon">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="projects-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div id="projects-empty" class="card" style="display:none">
+    <div class="empty-state"><div class="empty-icon">🔗</div><p>Sign in to load projects from SharePoint.</p></div>
+  </div>
+</div>
+
+<!-- ══════ IMPORT TAB ══════ -->
+<div id="tab-import" style="display:none">
+
+  <!-- Stage 1: Upload -->
+  <div id="import-s1">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Import from Trello</div></div>
+      <div class="stage-bar">
+        <div class="stage-step active-stage" id="stage1-lbl"><div class="stage-num">1</div>Load JSON</div>
+        <div class="stage-conn" id="conn-1-2"></div>
+        <div class="stage-step" id="stage2-lbl"><div class="stage-num">2</div>Map Fields</div>
+        <div class="stage-conn" id="conn-2-3"></div>
+        <div class="stage-step" id="stage3-lbl"><div class="stage-num">3</div>Preview &amp; Import</div>
+      </div>
+      <p style="font-size:13px;color:var(--steel);margin-bottom:20px;line-height:1.7">Export your Trello board as JSON: <strong>Board → Show Menu → More → Print and Export → Export as JSON.</strong> Then drop the file below.</p>
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+        <div class="drop-icon">📂</div>
+        <p>Drop Trello JSON here or click to browse</p>
+        <p class="drop-hint">.json files only</p>
+      </div>
+      <input type="file" id="file-input" accept=".json" onchange="loadFile(this.files[0])">
+    </div>
+  </div>
+
+  <!-- Stage 2: Map -->
+  <div id="import-s2" style="display:none">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Map Fields</div></div>
+      <div class="stage-bar">
+        <div class="stage-step done-stage" id="stage1-lbl2"><div class="stage-num">✓</div>Load JSON</div>
+        <div class="stage-conn done-conn"></div>
+        <div class="stage-step active-stage" id="stage2-lbl2"><div class="stage-num">2</div>Map Fields</div>
+        <div class="stage-conn" id="conn-2-3b"></div>
+        <div class="stage-step" id="stage3-lbl2"><div class="stage-num">3</div>Preview &amp; Import</div>
+      </div>
+      <div class="board-meta-bar" id="board-meta-bar"></div>
+
+      <label class="archived-toggle">
+        <input type="checkbox" id="include-archived"> Include archived/closed cards
+      </label>
+
+      <div class="section-label">List → Status Mapping</div>
+      <p style="font-size:12px;color:var(--steel);margin-bottom:12px;line-height:1.6">Each Trello list maps to a CORE_Projects Status value. Adjust as needed.</p>
+      <div class="list-status-map" id="list-status-map"></div>
+
+      <div class="section-label" style="margin-top:20px">Custom Fields → CORE_Projects Columns</div>
+      <p style="font-size:12px;color:var(--steel);margin-bottom:12px;line-height:1.6">Map your Trello custom fields to SharePoint columns. The tool auto-suggests matches by name. Sample values show the first card's data.</p>
+      <table class="map-table">
+        <thead><tr>
+          <th>CORE_Projects Column</th>
+          <th>Type</th>
+          <th>Map From (Trello field or card property)</th>
+          <th>Sample Value</th>
+        </tr></thead>
+        <tbody id="mapping-tbody"></tbody>
+      </table>
+
+      <div class="action-row">
+        <button class="btn btn-primary" onclick="goToPreview()">Preview Import →</button>
+        <button class="btn btn-secondary" onclick="resetImport()">← Start Over</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage 3: Preview + Run -->
+  <div id="import-s3" style="display:none">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Preview &amp; Import</div></div>
+      <div class="stage-bar">
+        <div class="stage-step done-stage"><div class="stage-num">✓</div>Load JSON</div>
+        <div class="stage-conn done-conn"></div>
+        <div class="stage-step done-stage"><div class="stage-num">✓</div>Map Fields</div>
+        <div class="stage-conn done-conn"></div>
+        <div class="stage-step active-stage"><div class="stage-num">3</div>Preview &amp; Import</div>
+      </div>
+      <p style="font-size:12px;color:var(--steel);margin-bottom:14px;line-height:1.7">
+        <span style="color:var(--amber);font-weight:600">⚠ Amber rows</span> may already exist in the list (matched by Client Name). Review before importing. Click the × to skip any row.
+      </p>
+      <div class="preview-wrap"><table class="preview-table" id="preview-table">
+        <thead id="preview-thead"></thead>
+        <tbody id="preview-tbody"></tbody>
+      </table></div>
+      <div class="action-row">
+        <button class="btn btn-primary" id="run-import-btn" onclick="runImport()">Run Import</button>
+        <button class="btn btn-secondary" onclick="goToMapping()">← Back to Mapping</button>
+        <span class="count-note" id="import-count-note"></span>
+      </div>
+    </div>
+    <div class="card" id="progress-card" style="display:none">
+      <div class="card-header"><div class="card-title">Import Progress</div></div>
+      <div class="import-progress">
+        <div style="font-size:13px;font-weight:600;" id="progress-label">Starting…</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+        <div class="import-log" id="import-log"></div>
+      </div>
+      <div class="action-row" style="margin-top:16px" id="post-import-actions" style="display:none">
+        <button class="btn btn-primary" onclick="fetchProjects();switchTab('projects')">View Projects →</button>
+        <button class="btn btn-secondary" onclick="resetImport()">Import More</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-import -->
+
+</div><!-- /main -->
+<div id="toast" class="toast"></div>
+
+<script>
+// ══════════════════════════════════ CONFIG
+const SP_CONFIG = {
+  clientId: '84b37f0e-b149-4089-9bdc-fc654715db23',
+  tenantId: 'ff0e3f46-615a-4a22-8a80-4bb83d627785',
+  redirectUri: 'https://chicophilly.github.io/bellweather-tools/core-projects-manager.html',
+  projectsUrl: 'https://graph.microsoft.com/v1.0/sites/bellweather.sharepoint.com:/sites/BWCore:/lists/CORE_Projects/items?$expand=fields&$select=id,fields&$top=500'
+};
+
+// CORE_Projects column spec — used for mapping UI and import
+const CORE_COLUMNS = [
+  {key:'ClientName',       label:'Client Name',           type:'text',     req:true},
+  {key:'JobCode',          label:'Job Code',              type:'text',     req:true},
+  {key:'ProjectDescription',label:'Project Description', type:'text'},
+  {key:'Address',          label:'Address',               type:'text'},
+  {key:'Neighborhood',     label:'Neighborhood',          type:'text'},
+  {key:'ScopeType',        label:'Scope Type',            type:'choice',   choices:['Kitchen','Bath','Kitchen & Bath','Whole Home','Addition','Basement','Exterior','Mixed']},
+  {key:'FinishLevel',      label:'Finish Level',          type:'choice',   choices:['Standard','Mid-Range','High-End','Luxury']},
+  {key:'SquareFootage',    label:'Square Footage',        type:'number'},
+  {key:'HomeAge',          label:'Home Age',              type:'text'},
+  {key:'Status',           label:'Status',                type:'choice',   choices:['Lead','IDEA','FDDA','CA','Construction','Warranty','Complete','Lost'], req:true, fromList:true},
+  {key:'IdeaSignedDate',   label:'IDEA Signed Date',      type:'date'},
+  {key:'IdeaLow',          label:'IDEA Low',              type:'currency'},
+  {key:'IdeaHigh',         label:'IDEA High',             type:'currency'},
+  {key:'IdeaAverage',      label:'IDEA Average',          type:'currency'},
+  {key:'FddaSignedDate',   label:'FDDA Signed Date',      type:'date'},
+  {key:'FddaLow',          label:'FDDA Low',              type:'currency'},
+  {key:'FddaHigh',         label:'FDDA High',             type:'currency'},
+  {key:'FddaAverage',      label:'FDDA Average',          type:'currency'},
+  {key:'CaSignedDate',     label:'CA Signed Date',        type:'date'},
+  {key:'CaValue',          label:'CA Value',              type:'currency'},
+  {key:'TargetInvestmentAmount',label:'Target Investment',type:'currency'},
+  {key:'DesignFeePct',     label:'Design Fee %',          type:'number'},
+  {key:'EstimatedDesignFee',label:'Est. Design Fee',      type:'currency'},
+  {key:'EstimatedConstructionBudget',label:'Est. Construction Budget',type:'currency'},
+  {key:'TotalDandDFee',    label:'Total D&D Fee',         type:'currency'},
+  {key:'ConstructionStartDate',label:'Construction Start Date',type:'date'},
+  {key:'SubstantialCompletionDate',label:'Substantial Completion Date',type:'date'},
+  {key:'IsHistoricalProperty',label:'Historical Property',type:'bool'},
+  {key:'Notes',            label:'Notes',                 type:'multiline'},
+];
+
+const STATUS_COLORS = {Lead:'s-Lead',IDEA:'s-IDEA',FDDA:'s-FDDA',CA:'s-CA',Construction:'s-Construction',Warranty:'s-Warranty',Complete:'s-Complete',Lost:'s-Lost'};
+
+// ══════════════════════════════════ AUTH
+let msalInstance=null, graphToken=null, allProjects=[], filteredProjects=[], sortCol='ClientName', sortAsc=true, expandedId=null;
+let activeFilters=new Set(['All']);
+
+async function initMsal(){
+  if(msalInstance)return;
+  msalInstance=new msal.PublicClientApplication({
+    auth:{clientId:SP_CONFIG.clientId,authority:`https://login.microsoftonline.com/${SP_CONFIG.tenantId}`,redirectUri:SP_CONFIG.redirectUri},
+    cache:{cacheLocation:'sessionStorage'}
+  });
+  await msalInstance.initialize();
+  const result=await msalInstance.handleRedirectPromise();
+  if(result) graphToken=result.accessToken;
+  const accounts=msalInstance.getAllAccounts();
+  if(accounts.length>0){
+    try{
+      const resp=await msalInstance.acquireTokenSilent({scopes:['https://graph.microsoft.com/Sites.ReadWrite.All'],account:accounts[0]});
+      graphToken=resp.accessToken;
+      setConnected(true);
+      fetchProjects();
+    }catch{setConnected(false);}
+  }else{setConnected(false);}
+}
+async function signIn(){
+  try{await msalInstance.loginRedirect({scopes:['https://graph.microsoft.com/Sites.ReadWrite.All']});}
+  catch(e){showToast('Sign-in error: '+(e.message||'Unknown'));}
+}
+async function getToken(){
+  const accounts=msalInstance.getAllAccounts();
+  if(!accounts.length)throw new Error('Not signed in');
+  const resp=await msalInstance.acquireTokenSilent({scopes:['https://graph.microsoft.com/Sites.ReadWrite.All'],account:accounts[0]});
+  return resp.accessToken;
+}
+async function graphFetch(url,opts={}){
+  if(!graphToken)graphToken=await getToken();
+  let resp=await fetch(url,{...opts,headers:{Authorization:`Bearer ${graphToken}`,'Content-Type':'application/json',...(opts.headers||{})}});
+  if(resp.status===401){graphToken=await getToken();resp=await fetch(url,{...opts,headers:{Authorization:`Bearer ${graphToken}`,'Content-Type':'application/json',...(opts.headers||{})}});}
+  if(!resp.ok&&resp.status!==204){const t=await resp.text();throw new Error(`Graph ${resp.status}: ${t}`);}
+  return resp.status===204?null:resp.json();
+}
+function setConnected(on){
+  document.getElementById('conn-dot').style.background=on?'var(--green)':'var(--amber)';
+  document.getElementById('conn-label').textContent=on?'SharePoint':'Not connected';
+  document.getElementById('conn-label').style.color=on?'rgba(255,255,255,0.55)':'var(--amber)';
+  document.getElementById('signin-btn').style.display=on?'none':'block';
+  if(!on){
+    document.getElementById('projects-loading').style.display='none';
+    document.getElementById('projects-content').style.display='none';
+    document.getElementById('projects-empty').style.display='block';
+  }
+}
+
+// ══════════════════════════════════ PROJECTS TAB
+async function fetchProjects(){
+  document.getElementById('projects-loading').style.display='block';
+  document.getElementById('projects-content').style.display='none';
+  document.getElementById('projects-empty').style.display='none';
+  try{
+    const data=await graphFetch(SP_CONFIG.projectsUrl);
+    allProjects=(data.value||[]).map(item=>{
+      const f=item.fields||{};
+      return {_id:item.id,...f};
+    });
+    document.getElementById('projects-loading').style.display='none';
+    document.getElementById('projects-content').style.display='block';
+    buildFilterPills();
+    renderSummary();
+    applyFilters();
+    setConnected(true);
+  }catch(e){
+    document.getElementById('projects-loading').style.display='none';
+    document.getElementById('projects-empty').style.display='block';
+    document.getElementById('projects-empty').innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><p style="color:var(--red)">${e.message}</p><button class="btn btn-secondary" style="margin-top:14px" onclick="fetchProjects()">Retry</button></div>`;
+    showToast('Failed to load: '+e.message);
+  }
+}
+
+function buildFilterPills(){
+  const statuses=['All','Lead','IDEA','FDDA','CA','Construction','Warranty','Complete','Lost'];
+  const counts={};
+  allProjects.forEach(p=>{counts[p.Status]=(counts[p.Status]||0)+1;});
+  const container=document.getElementById('filter-pills');
+  container.innerHTML=statuses.map(s=>{
+    const n=s==='All'?allProjects.length:(counts[s]||0);
+    if(n===0&&s!=='All')return'';
+    return `<div class="pill${activeFilters.has(s)?' active-pill':''}" data-s="${s}" onclick="toggleFilter('${s}')">${s} <span style="opacity:0.6">${n}</span></div>`;
+  }).join('');
+}
+
+function toggleFilter(s){
+  if(s==='All'){activeFilters=new Set(['All']);}
+  else{
+    activeFilters.delete('All');
+    if(activeFilters.has(s))activeFilters.delete(s);
+    else activeFilters.add(s);
+    if(activeFilters.size===0)activeFilters=new Set(['All']);
+  }
+  buildFilterPills();
+  applyFilters();
+}
+
+function renderSummary(){
+  const counts={};
+  allProjects.forEach(p=>{counts[p.Status]=(counts[p.Status]||0)+1;});
+  const active=['IDEA','FDDA','CA','Construction'].reduce((a,s)=>a+(counts[s]||0),0);
+  const totalCA=allProjects.filter(p=>p.CaValue).reduce((a,p)=>a+(parseFloat(p.CaValue)||0),0);
+  document.getElementById('summary-bar').innerHTML=`
+    <div class="stat"><label>Total</label><div class="num">${allProjects.length}</div></div>
+    <div class="stat"><label>Active</label><div class="num">${active}</div></div>
+    <div class="stat"><label>Lead</label><div class="num">${counts['Lead']||0}</div></div>
+    <div class="stat"><label>IDEA</label><div class="num">${counts['IDEA']||0}</div></div>
+    <div class="stat"><label>FDDA</label><div class="num">${counts['FDDA']||0}</div></div>
+    <div class="stat"><label>CA / Build</label><div class="num">${(counts['CA']||0)+(counts['Construction']||0)}</div></div>
+    ${totalCA>0?`<div class="stat"><label>Total CA Value</label><div class="num" style="font-size:16px">$${(totalCA/1000000).toFixed(1)}M</div></div>`:''}
+  `;
+}
+
+function applyFilters(){
+  const q=(document.getElementById('search-input').value||'').toLowerCase();
+  filteredProjects=allProjects.filter(p=>{
+    const statusOk=activeFilters.has('All')||activeFilters.has(p.Status);
+    const searchOk=!q||(p.ClientName||'').toLowerCase().includes(q)||(p.JobCode||'').toLowerCase().includes(q)||(p.Address||'').toLowerCase().includes(q)||(p.ProjectDescription||'').toLowerCase().includes(q);
+    return statusOk&&searchOk;
+  });
+  filteredProjects.sort((a,b)=>{
+    let av=a[sortCol]||'',bv=b[sortCol]||'';
+    if(typeof av==='number'||!isNaN(parseFloat(av))){av=parseFloat(av)||0;bv=parseFloat(bv)||0;}
+    else{av=String(av).toLowerCase();bv=String(bv).toLowerCase();}
+    return sortAsc?(av>bv?1:av<bv?-1:0):(av<bv?1:av>bv?-1:0);
+  });
+  renderTable();
+}
+
+function sortBy(col){
+  if(sortCol===col)sortAsc=!sortAsc;else{sortCol=col;sortAsc=true;}
+  document.querySelectorAll('.projects-table th').forEach(th=>th.classList.remove('sorted'));
+  const th=document.getElementById('th-'+col);
+  if(th){th.classList.add('sorted');th.querySelector('.sort-icon').textContent=sortAsc?'↑':'↓';}
+  applyFilters();
+}
+
+function renderTable(){
+  const tbody=document.getElementById('projects-tbody');
+  if(!filteredProjects.length){
+    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:44px;color:var(--silver)">No projects match the current filters.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML='';
+  filteredProjects.forEach(p=>{
+    const isExp=expandedId===p._id;
+    const dataRow=document.createElement('tr');
+    dataRow.className='data-row'+(isExp?' expanded-row':'');
+    dataRow.innerHTML=`
+      <td><span class="chevron${isExp?' open':''}">▶</span></td>
+      <td><strong>${esc(p.ClientName||'—')}</strong></td>
+      <td style="font-family:monospace;font-size:12px;color:var(--steel)">${esc(p.JobCode||'—')}</td>
+      <td><span class="status-badge ${STATUS_COLORS[p.Status]||''}">${esc(p.Status||'—')}</span></td>
+      <td style="color:var(--steel)">${esc(p.ScopeType||'—')}</td>
+      <td>${p.CaValue?'$'+Number(p.CaValue).toLocaleString():'—'}</td>
+      <td style="color:var(--steel);font-size:12px">${esc(p.Address||'—')}</td>
+    `;
+    dataRow.onclick=()=>toggleDetail(p._id);
+    tbody.appendChild(dataRow);
+    if(isExp){
+      const detailRow=document.createElement('tr');
+      detailRow.className='detail-row';
+      detailRow.innerHTML=`<td colspan="7">${buildDetailPanel(p)}</td>`;
+      tbody.appendChild(detailRow);
+    }
+  });
+}
+
+function toggleDetail(id){
+  expandedId=(expandedId===id)?null:id;
+  renderTable();
+}
+
+function buildDetailPanel(p){
+  const fields=[
+    {k:'ProjectDescription',l:'Description'},{k:'Neighborhood',l:'Neighborhood'},
+    {k:'FinishLevel',l:'Finish Level'},{k:'SquareFootage',l:'Sq Ft'},{k:'HomeAge',l:'Home Age'},
+    {k:'IdeaSignedDate',l:'IDEA Signed'},{k:'IdeaLow',l:'IDEA Low',c:true},{k:'IdeaHigh',l:'IDEA High',c:true},{k:'IdeaAverage',l:'IDEA Avg',c:true},
+    {k:'FddaSignedDate',l:'FDDA Signed'},{k:'FddaLow',l:'FDDA Low',c:true},{k:'FddaHigh',l:'FDDA High',c:true},{k:'FddaAverage',l:'FDDA Avg',c:true},
+    {k:'CaSignedDate',l:'CA Signed'},{k:'TargetInvestmentAmount',l:'Target Investment',c:true},
+    {k:'DesignFeePct',l:'Design Fee %'},{k:'EstimatedDesignFee',l:'Est. Design Fee',c:true},
+    {k:'EstimatedConstructionBudget',l:'Est. Const. Budget',c:true},{k:'TotalDandDFee',l:'Total D&D Fee',c:true},
+    {k:'ConstructionStartDate',l:'Const. Start'},{k:'SubstantialCompletionDate',l:'Substantial Completion'},
+    {k:'IsHistoricalProperty',l:'Historical Property'},
+  ];
+  const grid=fields.map(f=>{
+    let v=p[f.k];
+    if(v===undefined||v===null||v===''){return `<div class="df"><label>${f.l}</label><div class="v empty">—</div></div>`;}
+    if(f.c&&typeof v==='number')v='$'+v.toLocaleString();
+    if(typeof v==='boolean')v=v?'Yes':'No';
+    if(String(v).includes('T00:00:00'))v=v.slice(0,10);
+    return `<div class="df"><label>${f.l}</label><div class="v">${esc(String(v))}</div></div>`;
+  }).join('');
+  const notes=p.Notes?`<div class="detail-notes-section"><label>Notes</label><p>${esc(p.Notes)}</p></div>`:'';
+  return `<div class="detail-panel"><div class="detail-grid">${grid}</div>${notes}</div>`;
+}
+
+// ══════════════════════════════════ IMPORT TAB
+let trelloData=null, listStatusMap={}, fieldMapping={};
+
+function resetImport(){
+  trelloData=null;listStatusMap={};fieldMapping={};
+  document.getElementById('import-s1').style.display='';
+  document.getElementById('import-s2').style.display='none';
+  document.getElementById('import-s3').style.display='none';
+  document.getElementById('progress-card').style.display='none';
+  document.getElementById('import-log').innerHTML='';
+  document.getElementById('file-input').value='';
+}
+
+function onDragOver(e){e.preventDefault();document.getElementById('drop-zone').classList.add('drag-over');}
+function onDragLeave(e){document.getElementById('drop-zone').classList.remove('drag-over');}
+function onDrop(e){e.preventDefault();document.getElementById('drop-zone').classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)loadFile(f);}
+
+function loadFile(file){
+  if(!file||!file.name.endsWith('.json')){showToast('Please select a .json file.');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      trelloData=JSON.parse(e.target.result);
+      buildMappingUI();
+    }catch{showToast('Could not parse JSON — check the file.');}
+  };
+  reader.readAsText(file);
+}
+
+function getActiveCards(){
+  const includeArchived=document.getElementById('include-archived')?.checked;
+  return(trelloData.cards||[]).filter(c=>includeArchived?true:!c.closed);
+}
+
+function buildMappingUI(){
+  const lists=trelloData.lists||[];
+  const customFields=trelloData.customFields||[];
+  const cards=trelloData.cards||[];
+  const totalActive=cards.filter(c=>!c.closed).length;
+
+  // Board meta
+  document.getElementById('board-meta-bar').innerHTML=`
+    <div style="flex:1"><div class="board-name-lbl">${esc(trelloData.name||'Trello Board')}</div>
+    <div class="board-sub">${cards.length} total cards · ${totalActive} active</div></div>
+    <span class="board-chip">${lists.length} lists</span>
+    <span class="board-chip" style="background:var(--green-bg);color:var(--green);border-color:var(--green)">${customFields.length} custom fields</span>
+  `;
+
+  // List → Status map
+  const statusOptions=['Lead','IDEA','FDDA','CA','Construction','Warranty','Complete','Lost','(skip)'];
+  const grid=document.getElementById('list-status-map');
+  grid.innerHTML='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--steel)">Trello List</div><div></div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--steel)">CORE Status</div>';
+  lists.forEach(l=>{
+    const suggested=guessStatus(l.name);
+    grid.innerHTML+=`
+      <label style="font-size:13px;font-weight:600;color:var(--navy)">${esc(l.name)}</label>
+      <div class="arrow">→</div>
+      <select class="status-map-select" id="listmap-${l.id}" data-listid="${l.id}">
+        ${statusOptions.map(s=>`<option value="${s}"${s===suggested?' selected':''}>${s}</option>`).join('')}
+      </select>`;
+  });
+
+  // Custom field → CORE column mapping
+  const trelloSources=[
+    {value:'__name__',label:'Card Name'},
+    {value:'__desc__',label:'Card Description'},
+    ...customFields.map(cf=>({value:cf.id,label:cf.name,cf}))
+  ];
+
+  // Get first card's custom field values for sample
+  const sampleCard=cards.find(c=>!c.closed)||(cards[0]||{});
+  const sampleCFVals={};
+  (sampleCard.customFieldItems||[]).forEach(item=>{
+    const cf=customFields.find(x=>x.id===item.idCustomField);
+    if(cf){
+      let v='';
+      if(item.value){if(item.value.text!==undefined)v=item.value.text;else if(item.value.number!==undefined)v=item.value.number;else if(item.value.date!==undefined)v=item.value.date;else if(item.value.checked!==undefined)v=item.value.checked;}
+      if(item.idValue&&cf.options){const opt=cf.options.find(o=>o.id===item.idValue);if(opt)v=opt.value?.text||'';}
+      sampleCFVals[cf.id]=v;
+    }
+  });
+  sampleCFVals['__name__']=sampleCard.name||'';
+  sampleCFVals['__desc__']=(sampleCard.desc||'').slice(0,80);
+
+  const tbody=document.getElementById('mapping-tbody');
+  tbody.innerHTML=CORE_COLUMNS.filter(c=>!c.fromList).map(col=>{
+    const suggested=suggestMapping(col,trelloSources);
+    const sampleVal=sampleCFVals[suggested]||'';
+    return `<tr>
+      <td><div class="field-lbl">${col.label}${col.req?'<span style="color:var(--red)"> *</span>':''}</div></td>
+      <td><div class="field-type">${col.type}</div></td>
+      <td><select class="map-select" id="map-${col.key}" onchange="updateSample('${col.key}',this.value)">
+        <option value="">(skip this column)</option>
+        ${trelloSources.map(s=>`<option value="${s.value}"${s.value===suggested?' selected':''}>${esc(s.label)}</option>`).join('')}
+      </select></td>
+      <td><div class="sample-val" id="sample-${col.key}" title="${esc(String(sampleVal))}">${esc(String(sampleVal).slice(0,50))||'—'}</div></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('import-s1').style.display='none';
+  document.getElementById('import-s2').style.display='';
+}
+
+function updateSample(colKey,sourceId){
+  const cards=trelloData.cards||[];
+  const customFields=trelloData.customFields||[];
+  const sampleCard=cards.find(c=>!c.closed)||(cards[0]||{});
+  let v='';
+  if(sourceId==='__name__')v=sampleCard.name||'';
+  else if(sourceId==='__desc__')v=(sampleCard.desc||'').slice(0,80);
+  else if(sourceId){
+    const item=(sampleCard.customFieldItems||[]).find(x=>x.idCustomField===sourceId);
+    const cf=customFields.find(x=>x.id===sourceId);
+    if(item&&cf){
+      if(item.value){if(item.value.text!==undefined)v=item.value.text;else if(item.value.number!==undefined)v=item.value.number;else if(item.value.date!==undefined)v=item.value.date;else if(item.value.checked!==undefined)v=item.value.checked;}
+      if(item.idValue&&cf.options){const opt=cf.options.find(o=>o.id===item.idValue);if(opt)v=opt.value?.text||'';}
+    }
+  }
+  const el=document.getElementById('sample-'+colKey);
+  if(el){el.textContent=String(v).slice(0,50)||'—';el.title=String(v);}
+}
+
+function guessStatus(listName){
+  const n=listName.toLowerCase();
+  if(n.includes('lead')||n.includes('prospect')||n.includes('inquiry'))return 'Lead';
+  if(n.includes('fdda')||n.includes('final design'))return 'FDDA';
+  if(n.includes('idea')||n.includes('initial design')||n.includes('pre-design'))return 'IDEA';
+  if(n.includes('construction')&&!n.includes('pre'))return 'Construction';
+  if(n.includes('ca ')||n.includes('contract')||n.includes('agreement'))return 'CA';
+  if(n.includes('warranty'))return 'Warranty';
+  if(n.includes('complete')||n.includes('done')||n.includes('closed'))return 'Complete';
+  if(n.includes('lost')||n.includes('dead')||n.includes('archive'))return '(skip)';
+  return 'Lead';
+}
+
+function suggestMapping(col,sources){
+  const label=col.label.toLowerCase();
+  for(const s of sources){
+    if(s.value==='__name__'||s.value==='__desc__')continue;
+    const sn=s.label.toLowerCase();
+    if(sn===label)return s.value;
+    if(sn.includes(label)||label.includes(sn.replace(/[^a-z]/g,'')))return s.value;
+  }
+  // Specific fallbacks
+  if(col.key==='ClientName'&&sources.find(s=>s.value==='__name__'))return '__name__';
+  if(col.key==='Notes'&&sources.find(s=>s.value==='__desc__'))return '__desc__';
+  if(col.key==='Address'){const m=sources.find(s=>s.label.toLowerCase().includes('address'));if(m)return m.value;}
+  if(col.key==='ProjectDescription'){const m=sources.find(s=>s.label.toLowerCase().includes('description')||s.label.toLowerCase().includes('scope'));if(m)return m.value;}
+  if(col.key==='JobCode'){const m=sources.find(s=>s.label.toLowerCase().includes('job')||s.label.toLowerCase().includes('code'));if(m)return m.value;}
+  return '';
+}
+
+// ── Build preview rows
+let previewRows=[];
+function goToPreview(){
+  // Collect list→status mapping
+  listStatusMap={};
+  document.querySelectorAll('.status-map-select').forEach(sel=>{
+    listStatusMap[sel.dataset.listid]=sel.value;
+  });
+  // Collect field mapping
+  fieldMapping={};
+  CORE_COLUMNS.filter(c=>!c.fromList).forEach(col=>{
+    const sel=document.getElementById('map-'+col.key);
+    if(sel&&sel.value)fieldMapping[col.key]=sel.value;
+  });
+
+  const cards=getActiveCards();
+  const customFields=trelloData.customFields||[];
+  const existingNames=new Set(allProjects.map(p=>(p.ClientName||'').toLowerCase()));
+
+  previewRows=cards.map((card,i)=>{
+    const listStatus=listStatusMap[card.idList]||'Lead';
+    if(listStatus==='(skip)')return null;
+
+    // Extract field values
+    const cfVals={};
+    (card.customFieldItems||[]).forEach(item=>{
+      const cf=customFields.find(x=>x.id===item.idCustomField);
+      if(!cf)return;
+      let v='';
+      if(item.value){if(item.value.text!==undefined)v=String(item.value.text);else if(item.value.number!==undefined)v=String(item.value.number);else if(item.value.date!==undefined)v=item.value.date;else if(item.value.checked!==undefined)v=item.value.checked;}
+      if(item.idValue&&cf.options){const opt=cf.options.find(o=>o.id===item.idValue);if(opt)v=opt.value?.text||'';}
+      cfVals[cf.id]=v;
+    });
+    cfVals['__name__']=card.name||'';
+    cfVals['__desc__']=card.desc||'';
+
+    const row={_skip:false,_dupe:false,_cardId:card.id,fields:{Status:listStatus}};
+    CORE_COLUMNS.filter(c=>!c.fromList).forEach(col=>{
+      const src=fieldMapping[col.key];
+      if(!src)return;
+      let v=cfVals[src]!==undefined?cfVals[src]:'';
+      if(v===''||v===null||v===undefined)return;
+      // Type coercion
+      if(col.type==='number'||col.type==='currency'){v=parseFloat(String(v).replace(/[$,%]/g,''))||'';}
+      if(col.type==='date'&&v){try{v=new Date(v).toISOString();}catch{v='';}}
+      if(col.type==='bool'){v=String(v).toLowerCase()==='true'||v===true;}
+      if(v!=='')row.fields[col.key]=v;
+    });
+
+    // Dupe check
+    const clientName=(row.fields.ClientName||'').toLowerCase();
+    if(clientName&&existingNames.has(clientName))row._dupe=true;
+
+    return row;
+  }).filter(Boolean);
+
+  renderPreview();
+  document.getElementById('import-s2').style.display='none';
+  document.getElementById('import-s3').style.display='';
+}
+
+function goToMapping(){
+  document.getElementById('import-s3').style.display='none';
+  document.getElementById('import-s2').style.display='';
+}
+
+function renderPreview(){
+  const showCols=['ClientName','JobCode','Status','Address','ScopeType','CaValue'];
+  const labels={ClientName:'Client',JobCode:'Job Code',Status:'Status',Address:'Address',ScopeType:'Scope',CaValue:'CA Value'};
+  document.getElementById('preview-thead').innerHTML='<tr><th></th>'+showCols.map(c=>`<th>${labels[c]||c}</th>`).join('')+'<th></th></tr>';
+  const tbody=document.getElementById('preview-tbody');
+  tbody.innerHTML='';
+  let importable=0;
+  previewRows.forEach((row,i)=>{
+    if(!row._skip)importable++;
+    const tr=document.createElement('tr');
+    tr.className=row._skip?'row-skip':(row._dupe?'row-dupe':'');
+    tr.innerHTML=`<td style="width:28px;text-align:center">${row._dupe&&!row._skip?'<span class="dupe-badge">Possible duplicate</span>':''}</td>`+
+      showCols.map(c=>{
+        let v=row.fields[c]||'';
+        if(c==='Status')v=v?`<span class="status-badge ${STATUS_COLORS[v]||''}">${esc(v)}</span>`:'-';
+        else if(c==='CaValue'&&v)v='$'+Number(v).toLocaleString();
+        else v=esc(String(v||'—'));
+        return `<td>${v}</td>`;
+      }).join('')+
+      `<td style="width:28px;text-align:center"><span class="skip-btn" title="${row._skip?'Include':'Skip this row'}" onclick="toggleSkip(${i})">${row._skip?'↩':'×'}</span></td>`;
+    tbody.appendChild(tr);
+  });
+  const total=previewRows.length;
+  const skipped=previewRows.filter(r=>r._skip).length;
+  const dupes=previewRows.filter(r=>r._dupe&&!r._skip).length;
+  document.getElementById('import-count-note').textContent=`${importable} to import · ${skipped} skipped${dupes>0?' · '+dupes+' possible duplicate(s)':''}`;
+  document.getElementById('run-import-btn').textContent=`Import ${importable} Project${importable!==1?'s':''}`;
+}
+
+function toggleSkip(i){previewRows[i]._skip=!previewRows[i]._skip;renderPreview();}
+
+// ── Run import
+async function runImport(){
+  if(!graphToken){showToast('Not connected to SharePoint.');return;}
+  const toImport=previewRows.filter(r=>!r._skip);
+  if(!toImport.length){showToast('Nothing to import.');return;}
+
+  document.getElementById('progress-card').style.display='block';
+  document.getElementById('run-import-btn').disabled=true;
+  const log=document.getElementById('import-log');
+  const bar=document.getElementById('progress-bar');
+  const lbl=document.getElementById('progress-label');
+  log.innerHTML='';
+
+  let ok=0,skipped=0,errors=0;
+  const postUrl='https://graph.microsoft.com/v1.0/sites/bellweather.sharepoint.com:/sites/BWCore:/lists/CORE_Projects/items';
+
+  for(let i=0;i<toImport.length;i++){
+    const row=toImport[i];
+    const pct=Math.round(((i)/toImport.length)*100);
+    bar.style.width=pct+'%';
+    lbl.textContent=`Importing ${i+1} of ${toImport.length}…`;
+    const clientName=row.fields.ClientName||`Card #${i+1}`;
+    try{
+      await graphFetch(postUrl,{
+        method:'POST',
+        body:JSON.stringify({fields:row.fields})
+      });
+      ok++;
+      log.innerHTML+=`<div class="log-ok">✓ ${esc(clientName)}</div>`;
+    }catch(e){
+      errors++;
+      log.innerHTML+=`<div class="log-err">✗ ${esc(clientName)} — ${e.message}</div>`;
+    }
+    log.scrollTop=log.scrollHeight;
+    await new Promise(r=>setTimeout(r,120));// throttle
+  }
+
+  bar.style.width='100%';
+  lbl.textContent=`Done — ${ok} imported, ${errors} error${errors!==1?'s':''}`;
+  log.innerHTML+=`<div class="log-warn">── Complete: ${ok} created, ${errors} failed ──</div>`;
+  log.scrollTop=log.scrollHeight;
+
+  document.getElementById('post-import-actions').style.display='flex';
+  if(ok>0)showToast(`${ok} project${ok!==1?'s':''} imported successfully.`);
+  // Refresh local list for dupe detection
+  try{await fetchProjectsSilent();}catch{}
+}
+
+async function fetchProjectsSilent(){
+  const data=await graphFetch(SP_CONFIG.projectsUrl);
+  allProjects=(data.value||[]).map(item=>{const f=item.fields||{};return{_id:item.id,...f};});
+}
+
+// ══════════════════════════════════ UTILS
+function switchTab(name){
+  document.getElementById('tab-projects').style.display=name==='projects'?'':'none';
+  document.getElementById('tab-import').style.display=name==='import'?'':'none';
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['projects','import'][i]===name));
+  if(name==='projects'&&allProjects.length===0&&graphToken)fetchProjects();
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+// ══════════════════════════════════ INIT
+initMsal();
+</script>
+</body>
+</html>
