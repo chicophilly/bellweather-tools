@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bellweather – Project Basis</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<style>
+  :root {
+    --navy:#282828; --slate:#3d4f6f; --steel:#6b7d9e; --silver:#a8b5cc;
+    --cloud:#dde3ed; --snow:#f4f6f9; --white:#ffffff;
+    --gold:#c8953e; --gold-light:#f5e6cc; --gold-dim:rgba(200,149,62,0.12);
+    --green:#2d8a5e; --green-bg:#e8f5ee;
+    --amber:#c17a2a; --amber-bg:#fdf3e4;
+    --red:#b94444;   --red-bg:#fce8e8;
+    --blue:#4a90c4;  --blue-bg:#e8f4fd;
+    --pink-admin:#fff0f3; --pink-admin-border:#e8a0b0;
+    --radius:8px;
+    --shadow:0 1px 3px rgba(26,39,68,0.08),0 4px 12px rgba(26,39,68,0.05);
+    --shadow-lg:0 4px 12px rgba(26,39,68,0.1),0 12px 32px rgba(26,39,68,0.08);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--snow);color:var(--navy);min-height:100vh;}
+
+  /* ── Header ── */
+  .header{background:var(--navy);padding:0 32px;display:flex;align-items:stretch;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.18);position:sticky;top:0;z-index:200;}
+  .header-left{display:flex;align-items:center;gap:16px;padding:12px 0;}
+  .header-logo{height:44px;width:auto;object-fit:contain;flex-shrink:0;}
+  .header-divider{width:1px;height:28px;background:rgba(255,255,255,0.18);}
+  .header-title{font-family:'Fraunces',serif;font-size:22px;font-weight:400;letter-spacing:1px;color:white;line-height:1.1;}
+  .header-title em{font-style:italic;font-weight:300;}
+  .header-subtitle{font-size:10px;font-weight:500;color:var(--silver);text-transform:uppercase;letter-spacing:2px;margin-top:2px;}
+  .tabs{display:flex;}
+  .tab{padding:20px 22px;font-size:12px;font-weight:600;color:var(--silver);cursor:pointer;border-bottom:3px solid transparent;text-transform:uppercase;letter-spacing:1.2px;transition:all 0.2s;}
+  .tab:hover{color:white;}
+  .tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+  .admin-label{font-size:11px;font-weight:600;color:var(--silver);letter-spacing:1px;text-transform:uppercase;transition:color 0.2s;}
+  .toggle{position:relative;width:40px;height:22px;flex-shrink:0;}
+  .toggle input{opacity:0;width:0;height:0;}
+  .toggle-track{position:absolute;inset:0;background:var(--silver);border-radius:11px;cursor:pointer;transition:background 0.2s;}
+  .toggle-track::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:white;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:transform 0.2s;}
+  .toggle input:checked+.toggle-track{background:var(--red);}
+  .toggle input:checked+.toggle-track::after{transform:translateX(18px);}
+
+  /* ── Layout ── */
+  .main{max-width:1000px;margin:0 auto;padding:28px 24px;}
+  .card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:20px;}
+  .card.admin-active{background:var(--pink-admin);border:1.5px solid var(--pink-admin-border);}
+  .card-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--cloud);flex-wrap:wrap;}
+  .card-title{font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--navy);}
+  .card-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;padding:3px 9px;border-radius:20px;}
+  .badge-numeric{background:var(--gold-dim);color:var(--amber);}
+  .badge-ternary{background:var(--red-bg);color:var(--red);}
+  .badge-custom{background:var(--blue-bg);color:var(--blue);}
+
+  /* ── Forms ── */
+  .form-row{display:flex;gap:16px;margin-bottom:16px;}
+  .form-group{flex:1;}
+  .form-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--steel);margin-bottom:6px;display:block;}
+  .form-input,.form-select{width:100%;border:1.5px solid var(--cloud);border-radius:6px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--navy);background:var(--white);transition:border-color 0.15s;}
+  .form-input:focus,.form-select:focus{outline:none;border-color:var(--gold);}
+  .form-input::placeholder{color:var(--silver);}
+
+  /* ── Buttons ── */
+  .btn{padding:10px 22px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;border:none;letter-spacing:0.3px;}
+  .btn-primary{background:var(--gold);color:var(--navy);}
+  .btn-primary:hover{background:#b8842e;}
+  .btn-secondary{background:var(--snow);color:var(--navy);border:1.5px solid var(--cloud);}
+  .btn-secondary:hover{border-color:var(--silver);}
+  .btn-danger{background:var(--red-bg);color:var(--red);border:1.5px solid var(--red);font-size:12px;padding:6px 14px;}
+  .btn-danger:hover{background:var(--red);color:white;}
+  .btn-ghost{background:none;border:1.5px dashed var(--cloud);color:var(--steel);font-size:13px;font-weight:600;padding:10px 22px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+  .btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+  .btn-sm{font-size:12px;padding:6px 14px;}
+
+  /* ── Guide text ── */
+  .guide-text{font-size:12px;color:var(--steel);margin-bottom:18px;line-height:1.8;background:var(--snow);padding:12px 16px;border-radius:6px;}
+  .guide-text strong{color:var(--navy);}
+  .guide-edit{width:100%;border:1.5px solid var(--pink-admin-border);border-radius:6px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--navy);background:white;resize:vertical;min-height:80px;margin-bottom:18px;line-height:1.7;}
+  .guide-edit:focus{outline:none;border-color:var(--red);}
+  .section-divider{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--silver);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--cloud);}
+
+  /* ── Dimension rows ── */
+  .dim-list-wrap{position:relative;}
+  .admin-mode .dim-list-wrap{padding-left:28px;padding-right:28px;}
+  .dimension-row{display:grid;grid-template-columns:200px auto 1fr;gap:16px;align-items:start;padding:16px 0;border-bottom:1px solid var(--cloud);position:relative;border-radius:4px;}
+  .dimension-row:last-child{border-bottom:none;}
+  .dimension-row.is-dragging{opacity:0.25;background:var(--cloud);}
+  .dim-label{font-size:13px;font-weight:600;color:var(--navy);padding-top:4px;}
+  .dim-desc{font-size:11px;color:var(--steel);margin-top:3px;line-height:1.45;}
+  .dim-controls{display:flex;flex-direction:column;gap:8px;}
+
+  /* ── Drop indicator ── */
+  .drop-line{height:3px;background:var(--gold);border-radius:2px;margin:0;position:relative;display:none;}
+  .drop-line.visible{display:block;}
+  .drop-line::before{content:'';position:absolute;left:-4px;top:-3px;width:8px;height:8px;background:var(--gold);border-radius:50%;}
+
+  /* ── Drag ghost ── */
+  .drag-ghost{position:fixed;background:white;border:2px solid var(--gold);border-radius:var(--radius);padding:12px 16px;box-shadow:0 16px 40px rgba(0,0,0,0.22);pointer-events:none;z-index:9999;transform:rotate(1.5deg);font-weight:600;font-size:13px;color:var(--navy);max-width:280px;opacity:0.96;display:none;}
+  .drag-ghost-sub{font-size:11px;font-weight:400;color:var(--steel);margin-top:3px;}
+
+  /* ── Drag handle ── */
+  .drag-handle{display:none;position:absolute;left:-22px;top:22px;color:var(--silver);cursor:grab;font-size:16px;padding:4px;line-height:1;user-select:none;transition:color 0.15s;}
+  .drag-handle:hover{color:var(--gold);}
+  .drag-handle:active{cursor:grabbing;}
+  .admin-mode .drag-handle{display:block;}
+
+  /* ── Delete btn ── */
+  .dim-delete-btn{display:none;position:absolute;right:-22px;top:16px;background:none;border:none;color:var(--silver);cursor:pointer;font-size:15px;padding:4px;border-radius:4px;transition:all 0.15s;}
+  .dim-delete-btn:hover{color:var(--red);}
+  .admin-mode .dim-delete-btn{display:block;}
+
+  /* ── Admin edit fields ── */
+  .dim-edit-label{font-size:13px;font-weight:600;width:100%;border:1.5px solid var(--pink-admin-border);border-radius:4px;padding:4px 8px;font-family:'DM Sans',sans-serif;background:white;color:var(--navy);}
+  .dim-edit-desc{font-size:11px;color:var(--steel);width:100%;margin-top:4px;border:1px solid var(--pink-admin-border);border-radius:4px;padding:4px 8px;font-family:'DM Sans',sans-serif;background:white;resize:vertical;}
+  .dim-edit-label:focus,.dim-edit-desc:focus{outline:none;border-color:var(--red);}
+
+  /* ── Block title edit ── */
+  .block-title-edit{font-family:'Fraunces',serif;font-size:16px;font-weight:600;border:1.5px solid var(--pink-admin-border);border-radius:4px;padding:3px 8px;background:white;color:var(--navy);width:200px;}
+  .block-title-edit:focus{outline:none;border-color:var(--red);}
+  .block-delete-btn{margin-left:auto;font-size:11px;padding:4px 10px;background:var(--red-bg);color:var(--red);border:1px solid var(--red);border-radius:4px;cursor:pointer;font-weight:600;display:none;transition:all 0.15s;}
+  .block-delete-btn:hover{background:var(--red);color:white;}
+  .admin-active .block-delete-btn{display:inline-flex;align-items:center;}
+
+  /* ── Add dimension row ── */
+  .add-dim-row{display:none;gap:12px;align-items:flex-end;padding:16px;background:var(--pink-admin);border:1px dashed var(--pink-admin-border);border-radius:6px;margin-top:16px;flex-wrap:wrap;}
+  .admin-active .add-dim-row{display:flex;}
+
+  /* ── Add block banner ── */
+  .add-block-banner{display:none;text-align:center;padding:24px;border:2px dashed var(--pink-admin-border);border-radius:var(--radius);background:var(--pink-admin);margin-bottom:20px;}
+  .add-block-banner p{font-size:12px;color:var(--steel);margin-bottom:14px;}
+
+  /* ── Score buttons ── */
+  .lod-group{display:flex;gap:6px;}
+  .lod-btn{min-width:44px;height:36px;border:1.5px solid var(--cloud);background:var(--white);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--steel);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;}
+  .lod-btn:hover{border-color:var(--silver);background:var(--snow);}
+  .lod-btn.sel-0{background:var(--green-bg);border-color:var(--green);color:var(--green);}
+  .lod-btn.sel-1{background:var(--blue-bg);border-color:var(--blue);color:var(--blue);}
+  .lod-btn.sel-2{background:var(--amber-bg);border-color:var(--amber);color:var(--amber);}
+  .lod-btn.sel-3{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+  .risk-group{display:flex;gap:6px;}
+  .risk-btn{min-width:52px;height:36px;border:1.5px solid var(--cloud);background:var(--white);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:var(--steel);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;}
+  .risk-btn:hover{border-color:var(--silver);background:var(--snow);}
+  .risk-btn.sel-low{background:var(--green-bg);border-color:var(--green);color:var(--green);}
+  .risk-btn.sel-med{background:var(--amber-bg);border-color:var(--amber);color:var(--amber);}
+  .risk-btn.sel-high{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+
+  /* ── Phase pills ── */
+  .phase-group{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;}
+  .phase-btn{padding:3px 9px;border:1px solid var(--cloud);background:var(--white);border-radius:20px;font-size:10px;font-weight:600;color:var(--steel);cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;transition:all 0.15s;}
+  .phase-btn:hover{border-color:var(--silver);}
+  .phase-btn.selected{background:var(--navy);border-color:var(--navy);color:white;}
+  .phase-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;background:var(--cloud);color:var(--steel);border:1px solid var(--cloud);}
+
+  /* ── Notes ── */
+  .dim-note{width:100%;border:1px solid var(--cloud);border-radius:6px;padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--navy);resize:vertical;min-height:64px;background:var(--snow);transition:border-color 0.15s;}
+  .dim-note:focus{outline:none;border-color:var(--gold);background:white;}
+  .dim-note::placeholder{color:var(--silver);}
+
+  /* ── Projects ── */
+  .project-item{display:flex;align-items:center;gap:16px;padding:14px 16px;border:1.5px solid var(--cloud);border-radius:var(--radius);margin-bottom:10px;cursor:pointer;transition:all 0.15s;background:white;}
+  .project-item:hover{border-color:var(--gold);box-shadow:var(--shadow);}
+  .project-name{font-weight:600;font-size:14px;}
+  .project-meta{font-size:12px;color:var(--steel);margin-top:2px;}
+  .project-badge{margin-left:auto;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+  .badge-pending{background:var(--gold-light);color:var(--amber);}
+  .badge-active{background:var(--green-bg);color:var(--green);}
+
+  /* ── HOD ── */
+  .hod-indicator{display:flex;align-items:flex-start;gap:16px;padding:20px 24px;border-radius:var(--radius);margin-bottom:20px;border:1.5px solid;}
+  .hod-standard{background:var(--green-bg);border-color:var(--green);}
+  .hod-informed{background:var(--amber-bg);border-color:var(--amber);}
+  .hod-oversight{background:var(--red-bg);border-color:var(--red);}
+  .hod-label{font-family:'Fraunces',serif;font-size:15px;font-weight:600;}
+  .hod-desc{font-size:12px;margin-top:3px;line-height:1.5;}
+
+  /* ── Results ── */
+  .results-dimension{padding:16px 0;border-bottom:1px solid var(--cloud);}
+  .results-dimension:last-child{border-bottom:none;}
+  .results-dim-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+  .results-dim-name{font-weight:600;font-size:13px;}
+  .results-scores{display:flex;gap:8px;flex-wrap:wrap;}
+  .score-chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1.5px solid;white-space:nowrap;}
+  .flag-variance{font-size:11px;font-weight:600;color:#b97a00;background:var(--amber-bg);padding:3px 10px;border-radius:20px;border:1px solid var(--amber);margin-left:auto;}
+  .flag-high{font-size:11px;font-weight:600;color:var(--red);background:var(--red-bg);padding:3px 10px;border-radius:20px;border:1px solid var(--red);margin-left:auto;}
+
+  /* ── Misc ── */
+  .notice{background:var(--gold-dim);border:1px solid var(--gold);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--amber);margin-bottom:20px;}
+  .empty-state{text-align:center;padding:48px 24px;color:var(--steel);}
+  .empty-state-icon{font-size:32px;margin-bottom:12px;}
+  details > summary { outline: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:white;padding:12px 20px;border-radius:var(--radius);font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);transform:translateY(80px);opacity:0;transition:all 0.3s;z-index:9998;}
+  .toast.show{transform:translateY(0);opacity:1;}
+
+  /* ── Add block modal ── */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:white;border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:28px;width:480px;max-width:90vw;}
+  .modal-title{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin-bottom:20px;}
+  .modal-footer{display:flex;gap:12px;margin-top:20px;justify-content:flex-end;}
+
+  @media(max-width:700px){.dimension-row{grid-template-columns:1fr;}.form-row{flex-direction:column;}.tabs .tab{padding:16px 12px;font-size:11px;}}
+</style>
+</head>
+<body>
+
+<!-- Ghost element -->
+<div class="drag-ghost" id="drag-ghost">
+  <div id="drag-ghost-label"></div>
+  <div class="drag-ghost-sub" id="drag-ghost-sub"></div>
+</div>
+
+<!-- Add block modal -->
+<div class="modal-overlay" id="add-block-modal">
+  <div class="modal">
+    <div class="modal-title">Add Assessment Block</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Block Title</label>
+        <input type="text" id="new-block-title" class="form-input" placeholder="e.g. Selections Detail">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Scale Type</label>
+        <select id="new-block-scale" class="form-select">
+          <option value="numeric">Numeric 0–3 (level of detail)</option>
+          <option value="ternary">LOW / MED / HIGH (risk)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Badge Label</label>
+        <input type="text" id="new-block-badge" class="form-input" placeholder="e.g. 0–3 Scale">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Guide Text (shown above scoring rows)</label>
+      <textarea id="new-block-guide" class="form-input" rows="3" placeholder="Describe what each rating means for this block..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeBlockModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAddBlock()">Add Block</button>
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-left">
+    <img class="header-logo" style="height:44px;width:auto;object-fit:contain;" src="data:image/png;base64,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" alt="Bellweather">
+    <div class="header-divider"></div>
+    <div>
+      <div class="header-title">Project <em>Basis</em></div>
+      <div class="header-subtitle">Pre-DA Assessment Tool</div>
+    </div>
+    <div class="header-divider"></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="admin-label">Admin</span>
+      <label class="toggle">
+        <input type="checkbox" id="admin-toggle" onchange="toggleAdminMode()">
+        <span class="toggle-track"></span>
+      </label>
+      <span id="gear-icon" style="font-size:22px;line-height:22px;height:22px;display:flex;align-items:center;color:var(--silver);transition:color 0.2s">⚙</span>
+    </div>
+    <div class="header-divider"></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="conn-dot" style="width:8px;height:8px;border-radius:50%;background:var(--silver);flex-shrink:0"></span>
+      <span id="conn-label" style="font-size:11px;color:var(--silver);font-weight:600;letter-spacing:0.5px;white-space:nowrap">Connecting…</span>
+      <button id="signin-btn" class="btn btn-secondary" style="font-size:11px;padding:4px 12px;display:none;color:var(--gold);border-color:var(--gold)" onclick="signIn()">Sign In</button>
+    </div>
+  </div>
+  <nav class="tabs">
+    <div class="tab active" onclick="switchTab('assess')">Assess</div>
+    <div class="tab" onclick="switchTab('results')">Results</div>
+    <div class="tab" onclick="switchTab('summary')">Summary</div>
+  </nav>
+</header>
+
+<div class="main">
+
+  <!-- ASSESS -->
+  <div id="tab-assess">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Assessment Setup</div></div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2"><label class="form-label">Project</label><select id="assess-project" class="form-select"><option value="">Select a project...</option></select></div>
+        <div class="form-group"><label class="form-label">Your Name</label><input type="text" id="assessor-name" class="form-input" placeholder="Name"></div>
+        <div class="form-group"><label class="form-label">Department</label>
+          <select id="assessor-dept" class="form-select"><option value="">Select...</option><option>Operations</option><option>Sales</option><option>Design</option><option>Production</option></select>
+        </div>
+      </div>
+    </div>
+    <div id="assess-blocks"></div>
+    <div class="add-block-banner" id="add-block-banner">
+      <p>Add a new assessment block to capture additional dimensions or scoring categories.</p>
+      <button class="btn btn-ghost" onclick="openBlockModal()">+ Add Assessment Block</button>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Open Notes</div></div>
+      <textarea id="open-notes" class="dim-note" rows="5" placeholder="Anything not captured above — concerns, patterns from similar projects, flags that need to be named before this project moves forward..."></textarea>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:36px">
+      <button class="btn btn-primary" onclick="submitAssessment()">Submit Assessment</button>
+      <button class="btn btn-secondary" onclick="clearAssessForm()">Clear Form</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="tab-results" style="display:none">
+    <div class="card"><div class="card-header"><div class="card-title">Select Project</div></div>
+      <select id="results-project" class="form-select" onchange="loadResults()" style="max-width:420px"><option value="">Select a project...</option></select>
+    </div>
+    <div id="results-content"></div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div id="tab-summary" style="display:none">
+    <div class="card"><div class="empty-state">
+      <div class="empty-state-icon">📄</div>
+      <p>Summary output — coming in a future version.</p>
+      <p style="margin-top:10px;font-size:12px;color:var(--silver);max-width:420px;margin-left:auto;margin-right:auto;line-height:1.6">Will generate structured project summary, timeline recommendations (fast-track / standard / extended design), and data to feed DA and CA contract writing.</p>
+    </div></div>
+  </div>
+
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════ DEFAULTS ═══
+const DEFAULT_BLOCKS = [
+  {
+    id:'lod', title:'Levels of Development', badge:'L / M / H', scaleType:'ternary',
+    guideText:'LOW — Schematic or rough sketch sufficient; concept-level intent is adequate\nMED — Design development level; key dimensions and details required\nHIGH — Full construction documents required; fully detailed, dimensioned, and specified',
+    dims:[
+      {id:'drawings',        label:'Drawings & Documentation',        desc:'Construction drawings, floor plans, elevations, sections, details',        phases:['Design']},
+      {id:'siteVerification',label:'Site & Field Verification',       desc:'Field measurements, existing conditions, structural unknowns',               phases:['Design']},
+      {id:'engineering',     label:'Engineering Requirements',        desc:'Structural, MEP, or specialty engineering coordination',                     phases:['Design']},
+      {id:'exteriorDetail',  label:'Exterior & Architectural Detail', desc:'Façade, roofline, windows, exterior material and form development',          phases:['Design']},
+      {id:'interiorDetail',  label:'Interior Design Detail',          desc:'Finish specifications, millwork design, spatial layout detail',              phases:['Design']},
+      {id:'selections',      label:'Selections Complexity',           desc:'Volume, complexity, and budget sensitivity of client selections',            phases:['Pre-Prod']},
+    ]
+  },
+  {
+    id:'risk', title:'Risk Assessment', badge:'LOW / MED / HIGH', scaleType:'ternary',
+    guideText:'Rate the risk level for each dimension. HIGH flags surface prominently in compiled results for discussion before DA signing.',
+    dims:[
+      {id:'clientRelationship',    label:'Client Relationship',          desc:'Decision pace, alignment, communication, expectation management'},
+      {id:'permitZoning',          label:'Permit & Zoning',              desc:'Permit complexity, variance exposure, jurisdiction difficulty'},
+      {id:'historical',            label:'Historical / Regulatory',      desc:'Historic district, watershed, drainage, deed or overlay restrictions'},
+      {id:'selectionsBudget',      label:'Selections Budget Discipline', desc:'Risk of selections driving cost overruns or decision delays'},
+      {id:'tradesConstructability',label:'Trades & Constructability',    desc:'Construction complexity, coordination demands, physical unknowns'},
+      {id:'outsidePartners',       label:'Outside Partners Required',    desc:'Architect, engineer, or specialist consultant coordination burden'},
+    ]
+  }
+];
+const PHASES = ['Design','Pre-Prod','Production'];
+
+// ══════════════════════════════════════════════════ STORAGE ════
+function getStore(){
+  try{ return {
+    assessments: JSON.parse(localStorage.getItem('lod_assessments') ||'[]'),
+    blocks:      JSON.parse(localStorage.getItem('lod_blocks')      ||'null') || DEFAULT_BLOCKS.map(b=>JSON.parse(JSON.stringify(b))),
+  }; }catch(e){ return {assessments:[],blocks:JSON.parse(JSON.stringify(DEFAULT_BLOCKS))}; }
+}
+function save(patch){
+  if(patch.assessments !==undefined) localStorage.setItem('lod_assessments', JSON.stringify(patch.assessments));
+  if(patch.blocks      !==undefined) localStorage.setItem('lod_blocks',      JSON.stringify(patch.blocks));
+}
+
+// ══════════════════════════════════════════════════ ADMIN ══════
+let adminMode=false;
+function toggleAdminMode(){
+  adminMode=document.getElementById('admin-toggle').checked;
+  document.getElementById('gear-icon').style.color=adminMode?'var(--red)':'var(--silver)';
+  document.getElementById('add-block-banner').style.display=adminMode?'block':'none';
+  renderAssessBlocks();
+}
+
+// ══════════════════════════════════════════════════ TABS ═══════
+const TABS=['assess','results','summary'];
+function switchTab(name){
+  TABS.forEach(t=>document.getElementById('tab-'+t).style.display=(t===name)?'block':'none');
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',TABS[i]===name));
+  if(name==='assess')  { populateAssessSelects(); renderAssessBlocks(); }
+  if(name==='results') populateResultsSelect();
+}
+
+// ══════════════════════════════════════════════════ SHAREPOINT ═
+const SP_CONFIG = {
+  clientId: '84b37f0e-b149-4089-9bdc-fc654715db23',
+  tenantId: 'ff0e3f46-615a-4a22-8a80-4bb83d627785',
+  redirectUri: 'https://chicophilly.github.io/bellweather-tools/project-basis.html',
+  graphBase: 'https://graph.microsoft.com/v1.0',
+  projectsUrl: 'https://graph.microsoft.com/v1.0/sites/bellweather.sharepoint.com:/sites/BWCore:/lists/CORE_Projects/items?$expand=fields&$select=id,fields&$top=500'
+};
+
+let msalInstance = null;
+let graphToken   = null;
+let spProjects   = [];   // live list from SharePoint
+let spLoaded     = false;
+
+async function initMsal() {
+  if (msalInstance) return;
+  msalInstance = new msal.PublicClientApplication({
+    auth: {
+      clientId:    SP_CONFIG.clientId,
+      authority:   `https://login.microsoftonline.com/${SP_CONFIG.tenantId}`,
+      redirectUri: SP_CONFIG.redirectUri
+    },
+    cache: { cacheLocation: 'sessionStorage' }
+  });
+  await msalInstance.initialize();
+
+  // Handle redirect return
+  const result = await msalInstance.handleRedirectPromise();
+  if (result) graphToken = result.accessToken;
+
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length > 0) {
+    try {
+      const resp = await msalInstance.acquireTokenSilent({
+        scopes: ['https://graph.microsoft.com/Sites.ReadWrite.All'],
+        account: accounts[0]
+      });
+      graphToken = resp.accessToken;
+      setConnected(true);
+      fetchProjects();
+    } catch {
+      showAuthBanner();
+    }
+  } else {
+    showAuthBanner();
+  }
+}
+
+async function signIn() {
+  try {
+    await msalInstance.loginRedirect({
+      scopes: ['https://graph.microsoft.com/Sites.ReadWrite.All']
+    });
+  } catch (err) {
+    showToast('Sign-in error: ' + (err.message || 'Unknown error'));
+  }
+}
+
+async function getToken() {
+  const accounts = msalInstance.getAllAccounts();
+  if (!accounts.length) throw new Error('Not signed in');
+  const resp = await msalInstance.acquireTokenSilent({
+    scopes: ['https://graph.microsoft.com/Sites.ReadWrite.All'],
+    account: accounts[0]
+  });
+  return resp.accessToken;
+}
+
+async function graphFetch(url) {
+  if (!graphToken) graphToken = await getToken();
+  let resp = await fetch(url, { headers: { Authorization: `Bearer ${graphToken}` } });
+  if (resp.status === 401) {
+    graphToken = await getToken();
+    resp = await fetch(url, { headers: { Authorization: `Bearer ${graphToken}` } });
+  }
+  if (!resp.ok) throw new Error(`Graph ${resp.status}`);
+  return resp.json();
+}
+
+function showAuthBanner() {
+  setConnected(false);
+  document.getElementById('signin-btn').style.display = '';
+  populateAssessSelects();
+  populateResultsSelect();
+}
+
+function setConnected(on) {
+  document.getElementById('conn-dot').style.background = on ? 'var(--green)' : 'var(--amber)';
+  document.getElementById('conn-label').textContent = on ? 'SharePoint' : 'Not connected';
+  document.getElementById('conn-label').style.color = on ? 'rgba(255,255,255,0.55)' : 'var(--amber)';
+  document.getElementById('signin-btn').style.display = on ? 'none' : '';
+}
+
+async function fetchProjects() {
+  try {
+    const data = await graphFetch(SP_CONFIG.projectsUrl);
+    spProjects = (data.value || []).map(item => {
+      const f = item.fields;
+      const client = f.ClientName || f.Title || '';
+      const desc   = f.ProjectDescription || f.Address || '';
+      const name   = desc ? `${client} — ${desc}` : client;
+      const caVal  = f.CaValue ? `$${Number(f.CaValue).toLocaleString()}` : '';
+      return {
+        id:       item.id,
+        name:     name || `Project #${item.id}`,
+        jobCode:  f.JobCode || '',
+        status:   f.Status || '',
+        caValue:  caVal,
+        address:  f.Address || '',
+        createdDate: (f.Created || '').slice(0, 10)
+      };
+    });
+    spLoaded = true;
+    setConnected(true);
+    populateAssessSelects();
+    populateResultsSelect();
+  } catch (err) {
+    setConnected(false);
+    showToast('Failed to load projects: ' + err.message);
+  }
+}
+function goAssess(id){switchTab('assess');setTimeout(()=>{document.getElementById('assess-project').value=id;},60);}
+
+// ══════════════════════════════════════════════════ BLOCKS ═════
+function renderAssessBlocks(){
+  const {blocks}=getStore();
+  const wrap=document.getElementById('assess-blocks');
+  wrap.innerHTML=blocks.map(b=>buildBlockCard(b)).join('');
+  blocks.forEach(b=>{
+    const lw=document.getElementById('dimlist-'+b.id);
+    if(lw) lw.classList.toggle('admin-mode',adminMode);
+    initDrag(b.id);
+  });
+}
+
+function badgeClass(scaleType){
+  if(scaleType==='numeric') return 'badge-numeric';
+  if(scaleType==='ternary') return 'badge-ternary';
+  return 'badge-custom';
+}
+
+function buildBlockCard(block){
+  const titleEl = adminMode
+    ? `<input class="block-title-edit" value="${esc(block.title)}" oninput="updateBlockField('${block.id}','title',this.value)">`
+    : `<div class="card-title">${block.title}</div>`;
+
+  const badgeEl = `<span class="card-badge ${badgeClass(block.scaleType)}">${esc(block.badge)}</span>`;
+
+  const deleteEl = `<button class="block-delete-btn" onclick="deleteBlock('${block.id}')">✕ Remove Block</button>`;
+
+  const guideEl = adminMode
+    ? `<textarea class="guide-edit" oninput="updateBlockField('${block.id}','guideText',this.value)" placeholder="Describe what each rating means...">${esc(block.guideText)}</textarea>`
+    : `<div class="guide-text">${formatGuideText(block.guideText)}</div>`;
+
+  const rows = block.dims.map(d=>buildDimRow(d,block)).join('');
+
+  const addRow = `<div class="add-dim-row">
+    <div class="form-group" style="flex:2"><label class="form-label">Label</label><input type="text" id="newdim-label-${block.id}" class="form-input" placeholder="Dimension name"></div>
+    <div class="form-group" style="flex:3"><label class="form-label">Description</label><input type="text" id="newdim-desc-${block.id}" class="form-input" placeholder="Short description"></div>
+    ${block.scaleType==='numeric'?`<div class="form-group" style="flex:none"><label class="form-label">Project Phase</label><div class="phase-group" style="margin-top:2px">${PHASES.map(p=>`<button type="button" class="phase-btn newdim-phase-btn-${block.id}" data-phase="${p}" onclick="this.classList.toggle('selected')">${p}</button>`).join('')}</div></div>`:''}
+    <button class="btn btn-primary btn-sm" style="flex:none;white-space:nowrap" onclick="addDim('${block.id}')">+ Add</button>
+  </div>`;
+
+  return `<div class="card${adminMode?' admin-active':''}" id="card-${block.id}">
+    <div class="card-header">${titleEl}${badgeEl}${adminMode?deleteEl:''}</div>
+    ${guideEl}
+    <div class="section-divider">Rate each dimension</div>
+    <div class="dim-list-wrap${adminMode?' admin-mode':''}" id="dimlist-${block.id}">${rows}</div>
+    ${addRow}
+  </div>`;
+}
+
+function formatGuideText(text){
+  if(!text) return '';
+  return text.split('\n').filter(Boolean).map(line=>{
+    const m=line.match(/^(\d+|LOW|MED|HIGH|[+\-\/]+)\s*[—\-–]\s*(.+)/i);
+    if(m) return `<strong>${m[1]}</strong> — ${m[2]}`;
+    return line;
+  }).join('<br>');
+}
+
+function buildDimRow(dim,block){
+  const isNumeric = block.scaleType==='numeric';
+  const dimPhases = Array.isArray(dim.phases) ? dim.phases : (dim.phase ? [dim.phase] : []);
+
+  const labelEl = adminMode
+    ? `<input class="dim-edit-label" value="${esc(dim.label)}" oninput="updateDimField('${block.id}','${dim.id}','label',this.value)">`
+    : `<div class="dim-label">${dim.label}</div>`;
+
+  const descEl = adminMode
+    ? `<textarea class="dim-edit-desc" rows="2" oninput="updateDimField('${block.id}','${dim.id}','desc',this.value)">${esc(dim.desc)}</textarea>`
+    : `<div class="dim-desc">${dim.desc}</div>`;
+
+  let phaseEl='';
+  if(isNumeric){
+    if(adminMode){
+      phaseEl=`<div style="margin-top:6px"><div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--steel);margin-bottom:4px">Project Phase</div>
+        <div class="phase-group">
+          ${PHASES.map(p=>`<button class="phase-btn${dimPhases.includes(p)?' selected':''}" onclick="toggleDimPhase('${block.id}','${dim.id}','${p}')">${p}</button>`).join('')}
+        </div></div>`;
+    } else if(dimPhases.length){
+      phaseEl=`<div class="phase-group" style="margin-top:4px">${dimPhases.map(p=>`<span class="phase-tag">${p}</span>`).join('')}</div>`;
+    }
+  }
+
+  const scoreEl = isNumeric
+    ? `<div class="lod-group" data-block="${block.id}" data-dim="${dim.id}">${[0,1,2,3].map(n=>`<button class="lod-btn" data-val="${n}" onclick="setScore(this,'${block.id}','${dim.id}','numeric')">${n}</button>`).join('')}</div>`
+    : `<div class="risk-group" data-block="${block.id}" data-dim="${dim.id}">
+        <button class="risk-btn" data-val="low"  onclick="setScore(this,'${block.id}','${dim.id}','ternary')">LOW</button>
+        <button class="risk-btn" data-val="med"  onclick="setScore(this,'${block.id}','${dim.id}','ternary')">MED</button>
+        <button class="risk-btn" data-val="high" onclick="setScore(this,'${block.id}','${dim.id}','ternary')">HIGH</button>
+       </div>`;
+
+  return `<div class="dimension-row" data-blockid="${block.id}" data-dimid="${dim.id}">
+    <div class="drag-handle" title="Drag to reorder">⠿</div>
+    <div>${labelEl}${descEl}${isNumeric?phaseEl:''}</div>
+    <div class="dim-controls">${scoreEl}</div>
+    <textarea class="dim-note" id="note-${block.id}-${dim.id}" placeholder="Notes..."></textarea>
+    <button class="dim-delete-btn" onclick="deleteDim('${block.id}','${dim.id}')" title="Remove">✕</button>
+  </div>`;
+}
+
+// ══════════════════════════════════════════ ADMIN: BLOCK EDITS ══
+function updateBlockField(blockId,field,val){
+  const s=getStore(); const b=s.blocks.find(x=>x.id===blockId); if(b) b[field]=val; save({blocks:s.blocks});
+}
+function deleteBlock(blockId){
+  if(!confirm('Remove this entire assessment block and all its dimensions?')) return;
+  const s=getStore(); s.blocks=s.blocks.filter(b=>b.id!==blockId); save({blocks:s.blocks}); renderAssessBlocks(); showToast('Block removed.');
+}
+function updateDimField(blockId,dimId,field,val){
+  const s=getStore(); const b=s.blocks.find(x=>x.id===blockId); if(!b)return; const d=b.dims.find(x=>x.id===dimId); if(d)d[field]=val; save({blocks:s.blocks});
+}
+function toggleDimPhase(blockId,dimId,phase){
+  const s=getStore(); const b=s.blocks.find(x=>x.id===blockId); if(!b)return;
+  const d=b.dims.find(x=>x.id===dimId); if(!d)return;
+  const phases=Array.isArray(d.phases)?d.phases:(d.phase?[d.phase]:[]);
+  const idx=phases.indexOf(phase);
+  if(idx>=0) phases.splice(idx,1); else phases.push(phase);
+  d.phases=phases; delete d.phase;
+  save({blocks:s.blocks}); renderAssessBlocks();
+}
+function deleteDim(blockId,dimId){
+  if(!confirm('Remove this dimension?'))return;
+  const s=getStore(); const b=s.blocks.find(x=>x.id===blockId); if(!b)return;
+  b.dims=b.dims.filter(d=>d.id!==dimId); save({blocks:s.blocks}); renderAssessBlocks(); showToast('Dimension removed.');
+}
+function addDim(blockId){
+  const label=document.getElementById('newdim-label-'+blockId)?.value.trim(); if(!label){showToast('Enter a label.');return;}
+  const s=getStore(); const b=s.blocks.find(x=>x.id===blockId); if(!b)return;
+  const selectedPhases=[...document.querySelectorAll(`.newdim-phase-btn-${blockId}.selected`)].map(el=>el.dataset.phase);
+  b.dims.push({id:'d_'+Date.now(),label,desc:document.getElementById('newdim-desc-'+blockId)?.value.trim()||'',phases:selectedPhases});
+  save({blocks:s.blocks}); renderAssessBlocks(); showToast('Dimension added.');
+}
+
+// ══════════════════════════════════════════ ADD BLOCK MODAL ═════
+function openBlockModal(){document.getElementById('add-block-modal').classList.add('open');}
+function closeBlockModal(){document.getElementById('add-block-modal').classList.remove('open'); ['new-block-title','new-block-badge','new-block-guide'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});}
+function confirmAddBlock(){
+  const title=document.getElementById('new-block-title').value.trim(); if(!title){showToast('Enter a title.');return;}
+  const scale=document.getElementById('new-block-scale').value;
+  const badge=document.getElementById('new-block-badge').value.trim()||(scale==='numeric'?'0–3 Scale':'LOW / MED / HIGH');
+  const guide=document.getElementById('new-block-guide').value.trim();
+  const s=getStore();
+  s.blocks.push({id:'blk_'+Date.now(),title,badge,scaleType:scale,guideText:guide,dims:[]});
+  save({blocks:s.blocks}); closeBlockModal(); renderAssessBlocks(); showToast('Block added.');
+}
+document.getElementById('add-block-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeBlockModal();});
+
+// ══════════════════════════════════════════════════ SCORING ════
+function setScore(btn,blockId,dimId,type){
+  if(type==='numeric'){
+    document.querySelector(`.lod-group[data-block="${blockId}"][data-dim="${dimId}"]`).querySelectorAll('.lod-btn').forEach(b=>b.className='lod-btn');
+    btn.classList.add('sel-'+btn.dataset.val);
+  } else {
+    document.querySelector(`.risk-group[data-block="${blockId}"][data-dim="${dimId}"]`).querySelectorAll('.risk-btn').forEach(b=>b.className='risk-btn');
+    btn.classList.add('sel-'+btn.dataset.val);
+  }
+}
+function populateAssessSelects(){
+  document.getElementById('assess-project').innerHTML='<option value="">Select a project...</option>'+spProjects.map(p=>`<option value="${p.id}">${p.name}${p.jobCode?' ('+p.jobCode+')':''}</option>`).join('');
+}
+
+// ══════════════════════════════════════════════════ SUBMIT ═════
+function submitAssessment(){
+  const projectId=document.getElementById('assess-project').value;
+  const name=document.getElementById('assessor-name').value.trim();
+  const dept=document.getElementById('assessor-dept').value;
+  if(!projectId){showToast('Select a project.');return;} if(!name){showToast('Enter your name.');return;}
+  const {blocks}=getStore();
+  const scores={};
+  blocks.forEach(b=>{
+    scores[b.id]={};
+    b.dims.forEach(d=>{
+      if(b.scaleType==='numeric'){
+        const sel=document.querySelector(`.lod-group[data-block="${b.id}"][data-dim="${d.id}"] .lod-btn[class*="sel-"]`);
+        scores[b.id][d.id]={score:sel?parseInt(sel.dataset.val):null,note:document.getElementById(`note-${b.id}-${d.id}`)?.value.trim()||''};
+      } else {
+        const sel=document.querySelector(`.risk-group[data-block="${b.id}"][data-dim="${d.id}"] .risk-btn[class*="sel-"]`);
+        scores[b.id][d.id]={score:sel?sel.dataset.val:null,note:document.getElementById(`note-${b.id}-${d.id}`)?.value.trim()||''};
+      }
+    });
+  });
+  const s=getStore();
+  s.assessments.push({id:Date.now().toString(),projectId,assessorName:name,assessorDept:dept,submittedDate:new Date().toLocaleDateString(),scores,openNotes:document.getElementById('open-notes').value.trim()});
+  save({assessments:s.assessments}); showToast(`Submitted — ${name}`); clearAssessForm();
+}
+function clearAssessForm(){
+  document.getElementById('assessor-name').value=''; document.getElementById('assessor-dept').value=''; document.getElementById('open-notes').value='';
+  document.querySelectorAll('.lod-btn').forEach(b=>b.className='lod-btn');
+  document.querySelectorAll('.risk-btn').forEach(b=>b.className='risk-btn');
+  document.querySelectorAll('.dim-note').forEach(b=>b.value='');
+}
+
+// ══════════════════════════════════════════════════ DRAG ═══════
+function initDrag(blockId){
+  const list=document.getElementById('dimlist-'+blockId); if(!list)return;
+  const ghost=document.getElementById('drag-ghost');
+  const ghostLabel=document.getElementById('drag-ghost-label');
+  const ghostSub=document.getElementById('drag-ghost-sub');
+  let dragged=null, offsetX=0, offsetY=0;
+
+  list.querySelectorAll('.drag-handle').forEach(handle=>{
+    const row=handle.closest('.dimension-row');
+    handle.addEventListener('mousedown',e=>{
+      if(!adminMode)return; e.preventDefault();
+      dragged=row;
+      // Position ghost at cursor
+      offsetX=20; offsetY=10;
+      ghostLabel.textContent=row.querySelector('.dim-label,.dim-edit-label')?.value||row.querySelector('.dim-label,.dim-edit-label')?.textContent||'';
+      ghostSub.textContent=row.querySelector('.dim-desc,.dim-edit-desc')?.value||row.querySelector('.dim-desc,.dim-edit-desc')?.textContent||'';
+      ghost.style.left=(e.clientX+offsetX)+'px'; ghost.style.top=(e.clientY-offsetY)+'px'; ghost.style.display='block';
+      row.classList.add('is-dragging');
+      clearDropLines();
+
+      const onMove=ev=>{
+        ev.preventDefault();
+        ghost.style.left=(ev.clientX+offsetX)+'px'; ghost.style.top=(ev.clientY-offsetY)+'px';
+        // Find nearest row midpoint and show drop line
+        clearDropLines();
+        const rows=[...list.querySelectorAll('.dimension-row:not(.is-dragging)')];
+        if(!rows.length)return;
+        let insertBefore=null;
+        for(const r of rows){
+          const rect=r.getBoundingClientRect(); const mid=rect.top+rect.height/2;
+          if(ev.clientY<mid){insertBefore=r;break;}
+        }
+        // Insert a drop line indicator
+        const indicator=document.createElement('div'); indicator.className='drop-line visible'; indicator.id='active-drop-line';
+        if(insertBefore) list.insertBefore(indicator,insertBefore);
+        else list.appendChild(indicator);
+      };
+
+      const onUp=()=>{
+        ghost.style.display='none';
+        if(dragged) dragged.classList.remove('is-dragging');
+        // Find drop indicator position and do the actual move
+        const indicator=document.getElementById('active-drop-line');
+        if(indicator&&dragged){
+          list.insertBefore(dragged,indicator);
+        }
+        clearDropLines();
+        // Persist new order
+        const newOrder=[...list.querySelectorAll('.dimension-row')].map(r=>r.dataset.dimid);
+        const s=getStore(); const b=s.blocks.find(x=>x.id===blockId);
+        if(b){ b.dims=newOrder.map(id=>b.dims.find(d=>d.id===id)).filter(Boolean); save({blocks:s.blocks}); }
+        dragged=null;
+        document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp);
+      };
+      document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onUp);
+    });
+  });
+}
+function clearDropLines(){
+  document.querySelectorAll('.drop-line').forEach(el=>el.remove());
+}
+
+// ══════════════════════════════════════════════════ RESULTS ════
+function populateResultsSelect(){
+  document.getElementById('results-project').innerHTML='<option value="">Select a project...</option>'+spProjects.map(p=>`<option value="${p.id}">${p.name}${p.jobCode?' ('+p.jobCode+')':''}</option>`).join('');
+}
+function loadResults(){
+  const pid=document.getElementById('results-project').value; const el=document.getElementById('results-content'); if(!pid){el.innerHTML='';return;}
+  const s=getStore(); const asmts=s.assessments.filter(a=>a.projectId===pid);
+  if(!asmts.length){el.innerHTML='<div class="card"><div class="empty-state"><div class="empty-state-icon">📊</div><p>No assessments submitted yet.</p></div></div>';return;}
+
+  // Composite score
+  const rMap={low:0,med:1,high:2};
+  let totalNorm=0, blockCount=0;
+  s.blocks.forEach(b=>{
+    const vals=[];
+    b.dims.forEach(d=>asmts.forEach(a=>{
+      const sc=a.scores?.[b.id]?.[d.id]?.score;
+      if(sc===null||sc===undefined||sc==='') return;
+      vals.push(b.scaleType==='numeric'?sc/3:(rMap[sc]||0)/2);
+    }));
+    if(vals.length){totalNorm+=vals.reduce((a,c)=>a+c,0)/vals.length; blockCount++;}
+  });
+  const composite=blockCount?totalNorm/blockCount:0;
+  let hClass,hLabel,hDesc;
+  if(composite<0.33){hClass='hod-standard';hLabel='✓ Standard Process';hDesc='Low composite score. Standard design workflow applies. No HOD escalation required at this time.';}
+  else if(composite<0.66){hClass='hod-informed';hLabel='↑ HODs Should Be Informed';hDesc='Moderate score. Heads of Department should be briefed before DA signing. Review flagged items.';}
+  else{hClass='hod-oversight';hLabel='⚑ Active HOD Oversight Required';hDesc='Elevated score. Active HOD involvement required through the design phase.';}
+
+  let html=`<div class="hod-indicator ${hClass}"><div style="flex:1"><div class="hod-label">${hLabel}</div><div class="hod-desc">${hDesc}</div></div><div style="text-align:right;font-size:12px;color:var(--steel);white-space:nowrap">${asmts.length} respondent${asmts.length!==1?'s':''}<br>Composite: ${(composite*100).toFixed(0)}%</div></div>
+
+  <details class="card" style="margin-bottom:20px;cursor:pointer;">
+    <summary style="display:flex;align-items:center;gap:10px;list-style:none;padding:4px 0;cursor:pointer;">
+      <span style="font-family:'Fraunces',serif;font-size:15px;font-weight:600;color:var(--navy);">Assessment Key</span>
+      <span style="font-size:11px;font-weight:500;color:var(--steel);margin-left:2px;">How scores are calculated and what flags mean</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--silver);font-weight:600;text-transform:uppercase;letter-spacing:1px;">▾ Show</span>
+    </summary>
+    <div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--steel);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cloud);">Levels of Development</div>
+        <div style="font-size:12px;color:var(--navy);line-height:1.7;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--green-bg);border:1.5px solid var(--green);color:var(--green);">LOW</span> Schematic or rough sketch; concept-level intent is adequate</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--amber-bg);border:1.5px solid var(--amber);color:var(--amber);">MED</span> Design development level; key dimensions and details required</div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--red-bg);border:1.5px solid var(--red);color:var(--red);">HIGH</span> Full construction documents; fully detailed, dimensioned, specified</div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--steel);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cloud);">Risk Level</div>
+        <div style="font-size:12px;color:var(--navy);line-height:1.7;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--green-bg);border:1.5px solid var(--green);color:var(--green);">LOW</span> Routine — no special attention required</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--amber-bg);border:1.5px solid var(--amber);color:var(--amber);">MED</span> Worth watching — flag for team discussion</div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--red-bg);border:1.5px solid var(--red);color:var(--red);">HIGH</span> Elevated risk — surfaces prominently in results; must be discussed before DA signing</div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--steel);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cloud);">HOD Involvement Threshold</div>
+        <div style="font-size:12px;color:var(--navy);line-height:1.7;">
+          <p style="margin-bottom:8px;">The composite score normalizes all responses across all blocks to a 0–100% scale (LOW = 0%, MED = 50%, HIGH = 100% per dimension). The average across all scored dimensions determines the HOD recommendation:</p>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:6px;background:var(--green-bg);border:1px solid var(--green);font-size:12px;"><strong style="color:var(--green);min-width:80px;">0 – 33%</strong> <span>Standard Process — no HOD escalation needed</span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:6px;background:var(--amber-bg);border:1px solid var(--amber);font-size:12px;"><strong style="color:var(--amber);min-width:80px;">33 – 66%</strong> <span>HODs Should Be Informed before DA signing</span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:6px;background:var(--red-bg);border:1px solid var(--red);font-size:12px;"><strong style="color:var(--red);min-width:80px;">66 – 100%</strong> <span>Active HOD Oversight Required through design phase</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--steel);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cloud);">Flags &amp; Indicators</div>
+        <div style="font-size:12px;color:var(--navy);line-height:1.7;display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:flex-start;gap:10px;"><span style="font-size:11px;font-weight:600;color:var(--red);background:var(--red-bg);padding:3px 10px;border-radius:20px;border:1px solid var(--red);white-space:nowrap;margin-top:1px;">⚑ HIGH flagged</span><span>At least one respondent rated this dimension HIGH risk. Requires explicit discussion before the DA is signed.</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px;"><span style="font-size:11px;font-weight:600;color:#b97a00;background:var(--amber-bg);padding:3px 10px;border-radius:20px;border:1px solid var(--amber);white-space:nowrap;margin-top:1px;">⚠ Variance</span><span>Respondents are more than two-thirds of a full scale apart — a signal to align before proceeding. Worth a direct conversation.</span></div>
+          <div style="margin-top:4px;padding:10px 12px;background:var(--snow);border-radius:6px;border-left:3px solid var(--gold);font-size:11px;color:var(--steel);line-height:1.6;">Multiple respondents per project is intentional. Variance between assessors often surfaces assumptions that haven't been tested — that's useful data, not noise.</div>
+        </div>
+      </div>
+
+    </div>
+  </details>`;
+
+  const lBg=['var(--green-bg)','var(--blue-bg)','var(--amber-bg)','var(--red-bg)'];
+  const lC=['var(--green)','var(--blue)','var(--amber)','var(--red)'];
+  const rBg={low:'var(--green-bg)',med:'var(--amber-bg)',high:'var(--red-bg)'};
+  const rC={low:'var(--green)',med:'var(--amber)',high:'var(--red)'};
+
+  s.blocks.forEach(b=>{
+    html+=`<div class="card"><div class="card-header"><div class="card-title">${b.title}</div><span class="card-badge ${badgeClass(b.scaleType)}">${esc(b.badge)}</span></div>`;
+    b.dims.forEach(d=>{
+      const scores=asmts.map(a=>({name:a.assessorName,dept:a.assessorDept,score:a.scores?.[b.id]?.[d.id]?.score,note:a.scores?.[b.id]?.[d.id]?.note})).filter(x=>x.score!==null&&x.score!==undefined&&x.score!=='');
+      if(!scores.length)return;
+      const isNum=b.scaleType==='numeric';
+      const normVals=scores.map(x=>isNum?x.score:(rMap[x.score]||0));
+      const span=Math.max(...normVals)-Math.min(...normVals);
+      const maxSpan=isNum?3:2;
+      const hasVariance=span>=maxSpan*0.66;
+      const hasHigh=!isNum&&scores.some(x=>x.score==='high');
+      html+=`<div class="results-dimension"><div class="results-dim-header">
+        <div class="results-dim-name">${d.label}</div>
+        ${isNum&&(d.phases||d.phase)?(Array.isArray(d.phases)?d.phases:(d.phase?[d.phase]:[])).map(p=>`<span class="phase-tag">${p}</span>`).join(''):''}
+        ${hasHigh?'<span class="flag-high" style="margin-left:auto">⚑ HIGH flagged</span>':hasVariance?'<span class="flag-variance" style="margin-left:auto">⚠ Variance</span>':''}
+      </div><div class="results-scores">
+        ${scores.map(x=>{
+          const bg=isNum?lBg[x.score]:rBg[x.score]; const col=isNum?lC[x.score]:rC[x.score];
+          const label=isNum?x.score:x.score.toUpperCase();
+          return `<span class="score-chip" style="background:${bg};border-color:${col};color:${col}">${x.name}${x.dept?' · '+x.dept:''}: ${label}</span>`;
+        }).join('')}
+      </div>${scores.filter(x=>x.note).map(x=>`<div style="font-size:12px;color:var(--steel);margin-top:8px;padding:8px 12px;background:var(--snow);border-radius:4px;border-left:3px solid var(--cloud);font-style:italic">"${x.note}" <span style="font-style:normal;font-weight:600">— ${x.name}</span></div>`).join('')}</div>`;
+    });
+    html+='</div>';
+  });
+
+  const noted=asmts.filter(a=>a.openNotes);
+  if(noted.length){
+    html+='<div class="card"><div class="card-header"><div class="card-title">Open Notes</div></div>';
+    noted.forEach(a=>{html+=`<div style="margin-bottom:14px;padding:14px 16px;background:var(--snow);border-radius:6px;border-left:3px solid var(--gold)"><div style="font-size:11px;font-weight:600;color:var(--steel);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">${a.assessorName}${a.assessorDept?' · '+a.assessorDept:''} · ${a.submittedDate}</div><div style="font-size:13px;line-height:1.65">${a.openNotes}</div></div>`;});
+    html+='</div>';
+  }
+  el.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════ UTILS ══════
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+// ══════════════════════════════════════════════════ INIT ═══════
+renderAssessBlocks();
+initMsal();
+document.addEventListener('toggle', e => {
+  if (e.target.tagName === 'DETAILS') {
+    const arrow = e.target.querySelector('summary span:last-child');
+    if (arrow) arrow.textContent = e.target.open ? '▴ Hide' : '▾ Show';
+  }
+}, true);
+</script>
+</body>
+</html>
