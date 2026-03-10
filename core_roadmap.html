@@ -123,6 +123,7 @@ body.admin-mode .stack-item[data-editable] .stack-item-del{display:block;}
           <span class="toggle-track"></span>
         </label>
         <span style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.55);cursor:pointer;letter-spacing:0.5px;" onclick="document.getElementById('adminToggle').click()">Admin</span>
+        <span id="versionBadge" style="font-size:11px;font-weight:700;color:#C9A84C;letter-spacing:0.5px;margin-left:4px;">V32.0</span>
       </div>
       <div id="authStatus" style="display:flex;align-items:center;gap:8px;margin-left:16px;padding-left:16px;border-left:1px solid rgba(255,255,255,0.15);">
         <span id="authDot" style="width:8px;height:8px;border-radius:50%;background:#666;flex-shrink:0;transition:background 0.3s;"></span>
@@ -298,6 +299,7 @@ const DP=[
   {id:'timecard-analyzer',name:'Timecard Analyzer',type:'analyzer',adoption:90,impact:12,effort:2,status:'Deployed',deps:[],order:20},
 ];
 
+const CORE_VERSION='V32.0';
 let projects=[],selectedId=null;
 function load(){const s=localStorage.getItem('core_rubric_v15');if(s){try{projects=JSON.parse(s);DP.forEach(d=>{if(!projects.find(p=>p.id===d.id))projects.push({...d});});projects.forEach(p=>{if(p.order===undefined)p.order=99;if(p.schedWeek===undefined)p.schedWeek=0;if(p.durWeeks===undefined)p.durWeeks=null;if(p.effort<1)p.effort=1;if(p.effort>30)p.effort=30;if(!p.deps)p.deps=[];if(!p.assignedTo)p.assignedTo='byron';if(p.joeySchedWeek===undefined)p.joeySchedWeek=0;if(p.joeyDurWeeks===undefined)p.joeyDurWeeks=null;if(!p.notes)p.notes='';if(p.joeyEffort===undefined)p.joeyEffort=p.effort;if(p.desc===undefined)p.desc='';if(!TC[p.type])p.type=normCategory(p.type);// migrate Built → In Progress
 if(p.status==='Built')p.status='In Progress';});}catch(e){projects=DP.map(p=>({...p}));}}else{projects=DP.map(p=>({...p}));}}
@@ -403,11 +405,15 @@ function getIntensity(p){
 function getRowH(p){
   if(isDone(p))return GANTT.minRowH;
   if(p.assignedTo==='both'){
-    const bH=Math.max(14,Math.round(p.effort*GANTT.unitH/2));
-    const jH=Math.max(14,Math.round((p.joeyEffort||p.effort)*GANTT.unitH/2));
+    // Height scales with hours/week so stretching bar narrows it
+    const bDur=Math.max(1,p.durWeeks||1);
+    const jDur=Math.max(1,p.joeyDurWeeks||p.durWeeks||1);
+    const bH=Math.max(14,Math.round((p.effort/bDur)*GANTT.unitH/2));
+    const jH=Math.max(14,Math.round(((p.joeyEffort||p.effort)/jDur)*GANTT.unitH/2));
     return Math.max(GANTT.splitRowMinH,bH+jH+16);
   }
-  return Math.max(GANTT.minRowH,Math.round(p.effort*GANTT.unitH/2));
+  const dur=Math.max(1,p.durWeeks||1);
+  return Math.max(GANTT.minRowH,Math.round((p.effort/dur)*GANTT.unitH/2));
 }
 
 function drawGantt(){
@@ -1088,17 +1094,17 @@ function disableTaxonomyEditing(){
   disableListIndexEditing();
 }
 function saveTaxonomy(){
-  // Only persist category-level content (code, header name, description paragraph)
-  // Tool list is owned by projects[] — do not save it here
   const data=JSON.parse(localStorage.getItem('core_taxonomy_content')||'{}');
   document.querySelectorAll('.category-card').forEach(card=>{
     const type=card.dataset.type;
     if(!data[type])data[type]={};
-    data[type].code=card.querySelector('.category-code').textContent;
-    data[type].name=card.querySelector('.category-name').textContent;
-    data[type].desc=card.querySelector('.category-desc').textContent;
+    data[type].code=card.querySelector('.category-code')?.textContent||'';
+    data[type].name=card.querySelector('.category-name')?.textContent||'';
+    data[type].desc=card.querySelector('.category-desc')?.textContent||'';
   });
   localStorage.setItem('core_taxonomy_content',JSON.stringify(data));
+  // Push category data to SharePoint so other browsers get it
+  debouncedPush();
 }
 function loadTaxonomy(){
   // Restore category-level labels only; tool list rendered by syncTaxonomyFromProjects()
@@ -1646,7 +1652,27 @@ async function fetchConfig() {
       if (o.notes         !== undefined) p.notes         = o.notes;
       if (o.deps          !== undefined) p.deps          = o.deps;
     });
-    // Save to localStorage (no pushConfig — _configItemId is now set, but we just loaded from SP)
+    // ADD projects in ConfigData not yet in projects[] (locally-added tools on other browsers)
+    const existingIds = new Set(projects.map(p => p.id));
+    overrides.forEach(o => {
+      if (existingIds.has(o.id) || !o.id || !o.name) return;
+      projects.push({
+        id: o.id, name: o.name, type: normCategory(o.type),
+        desc: o.desc||'', status: o.status||'Conceived', order: o.order||99,
+        adoption: o.adoption||50, impact: o.impact||50,
+        effort: o.effort||2, joeyEffort: o.joeyEffort||2,
+        schedWeek: o.schedWeek||0, durWeeks: o.durWeeks||null,
+        joeySchedWeek: o.joeySchedWeek||0, joeyDurWeeks: o.joeyDurWeeks||null,
+        assignedTo: o.assignedTo||'byron', notes: o.notes||'', deps: o.deps||[],
+      });
+    });
+    // Restore category-level taxonomy from SP
+    const catRaw = items[0].fields?.CategoryData;
+    if (catRaw) {
+      localStorage.setItem('core_taxonomy_content', catRaw);
+      loadTaxonomy(); // apply category headers immediately
+    }
+    // Save to localStorage
     localStorage.setItem('core_rubric_v15', JSON.stringify(projects));
     // Clean up duplicate rows — keep only the one we loaded, delete the rest
     cleanupConfigRows(_configItemId);
@@ -1695,7 +1721,10 @@ async function pushConfig() {
       notes:         p.notes,
       deps:          p.deps,
     }));
-    const payload = { fields: { ConfigData: JSON.stringify(overrides) } };
+    const categoryData = localStorage.getItem('core_taxonomy_content') || '{}';
+    const fields = { ConfigData: JSON.stringify(overrides) };
+    try { fields.CategoryData = categoryData; } catch(e) {}
+    const payload = { fields };
     if (_configItemId) {
       await graphPatch(`${BWCORE}/CORE_Roadmap_Config/items/${_configItemId}`, payload);
     } else {
