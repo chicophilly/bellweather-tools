@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Deliverables Index</title>
+<script src="https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+:root {
+  --bg:#f5f3ef;--surface:#fff;--surface-2:#faf9f6;--border:#ddd9d0;--border-light:#eceae4;
+  --ink:#1a1917;--ink-mid:#4a4845;--ink-light:#8a8682;
+  --accent:#2c4a3e;--accent-light:#e8eeeb;--accent-rule:#8aab99;
+  --issue-bg:#fdf6f0;--issue-border:#e8d5c0;--issue-accent:#8b4513;--issue-accent-light:#f5e6d8;
+  --red:#c0392b;--red-light:#fdf2f0;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding:48px 24px 100px;}
+.page{max-width:900px;margin:0 auto;}
+
+#auth-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:20px;text-align:center;}
+.auth-title{font-family:'DM Serif Display',serif;font-size:28px;color:var(--ink);margin-bottom:6px;}
+.auth-sub{font-size:14px;color:var(--ink-mid);max-width:360px;line-height:1.6;}
+.btn-signin{display:flex;align-items:center;gap:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;padding:12px 24px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--ink);transition:all .15s;margin-top:8px;}
+.btn-signin:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+#auth-error{font-size:12px;color:var(--red);display:none;max-width:360px;text-align:center;margin-top:8px;}
+
+#app-screen{display:none;}
+
+#status-bar{display:none;align-items:center;gap:10px;background:#f0f4ff;border:1px solid #c8d4f0;border-radius:6px;padding:9px 14px;margin-bottom:20px;font-size:12px;color:#2a3a8a;}
+#status-bar.error{background:var(--red-light);border-color:#e0aca7;color:var(--red);}
+#status-bar.visible{display:flex;}
+.status-spinner{width:14px;height:14px;border:2px solid #c8d4f0;border-top-color:#2a3a8a;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.masthead{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:48px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
+.masthead-label{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-light);margin-bottom:8px;}
+.masthead h1{font-family:'DM Serif Display',serif;font-size:36px;font-weight:400;color:var(--ink);margin-bottom:10px;}
+.masthead-sub{font-size:14px;color:var(--ink-mid);line-height:1.6;max-width:560px;}
+.masthead-right{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+.user-badge{font-size:11px;color:var(--ink-light);text-align:right;line-height:1.5;}
+.btn-signout{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;padding:5px 10px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--ink-light);transition:all .15s;}
+.btn-signout:hover{background:var(--red-light);border-color:#e0aca7;color:var(--red);}
+
+.section-label{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-light);margin-bottom:16px;display:flex;align-items:center;gap:12px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border-light);}
+
+.issues-section{margin-bottom:56px;}
+.issue-card{background:var(--issue-bg);border:1px solid var(--issue-border);border-left:3px solid var(--issue-accent);border-radius:6px;margin-bottom:10px;overflow:hidden;}
+.issue-header{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;user-select:none;}
+.issue-toggle{flex-shrink:0;width:20px;height:20px;border-radius:4px;border:1.5px solid var(--issue-border);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--issue-accent);margin-top:1px;background:var(--issue-accent-light);transition:all .15s;}
+.issue-card.open .issue-toggle{background:var(--issue-accent);color:#fff;}
+.issue-title-row{flex:1;}
+.issue-title{font-size:14px;font-weight:600;color:var(--ink);line-height:1.3;}
+.issue-meta{font-size:11px;color:var(--ink-light);margin-top:3px;font-style:italic;}
+.issue-body{display:none;border-top:1px solid var(--issue-border);padding:16px 16px 16px 48px;}
+.issue-card.open .issue-body{display:block;}
+.issue-description{font-size:13px;color:var(--ink-mid);line-height:1.75;white-space:pre-wrap;margin-bottom:12px;}
+.issue-related-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-light);margin-bottom:6px;}
+.issue-related-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.issue-related-tag{font-size:10px;font-weight:500;padding:3px 8px;background:var(--issue-accent-light);color:var(--issue-accent);border-radius:3px;border:1px solid var(--issue-border);}
+
+.phases-section{margin-bottom:48px;}
+.phase-row{display:flex;gap:18px;margin-bottom:12px;align-items:stretch;}
+.phase-track{flex-shrink:0;width:36px;display:flex;flex-direction:column;align-items:center;}
+.phase-dot{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:16px;color:#fff;}
+.phase-line{width:1px;flex:1;background:var(--border);margin-top:6px;}
+.phase-content{flex:1;padding-bottom:24px;}
+.phase-title-block{padding-top:4px;margin-bottom:16px;}
+.phase-title-display{display:flex;align-items:flex-start;gap:8px;}
+.phase-title-text{flex:1;}
+.phase-title{font-family:'DM Serif Display',serif;font-size:21px;font-weight:400;color:var(--ink);line-height:1.2;}
+.phase-subtitle{font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--ink-light);text-transform:uppercase;margin-top:4px;}
+.phase-edit-form{display:none;}
+
+.deliverable{background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden;transition:border-color .15s;}
+.deliverable:hover,.deliverable.open,.deliverable.editing{border-color:var(--accent-rule);}
+.deliverable-header{display:flex;align-items:center;padding:13px 16px;gap:10px;}
+.deliverable-toggle{flex-shrink:0;width:20px;height:20px;border-radius:4px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink-light);transition:all .15s;cursor:pointer;user-select:none;}
+.deliverable.open .deliverable-toggle,.deliverable.editing .deliverable-toggle{background:var(--accent-light);border-color:var(--accent-rule);color:var(--accent);}
+.deliverable-name{font-size:14px;font-weight:500;color:var(--ink);flex:1;cursor:pointer;}
+.tag{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px;}
+.tag-tool{background:#f0ecf7;color:#5b3d8a;}
+.tag-share{background:var(--accent-light);color:var(--accent);}
+.icon-btn{flex-shrink:0;width:26px;height:26px;border-radius:4px;border:1px solid transparent;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ink-light);transition:all .15s;}
+.icon-btn:hover{background:#f0ede8;border-color:var(--border);color:var(--ink);}
+.icon-btn.danger:hover{background:var(--red-light);border-color:#e0aca7;color:var(--red);}
+.deliverable-body{display:none;border-top:1px solid var(--border-light);padding:18px 16px 18px 46px;}
+.deliverable.open .deliverable-body,.deliverable.editing .deliverable-body{display:block;}
+.view-mode{display:block;}
+.edit-mode{display:none;}
+.deliverable.editing .view-mode{display:none;}
+.deliverable.editing .edit-mode{display:block;}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 28px;margin-bottom:14px;}
+.detail-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-light);margin-bottom:5px;}
+.detail-text{font-size:13px;color:var(--ink-mid);line-height:1.65;}
+.sharing-tags{display:flex;gap:6px;flex-wrap:wrap;}
+.time-row{display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--border-light);border-radius:5px;padding:9px 12px;margin-bottom:12px;}
+.time-row .detail-label{margin-bottom:0;white-space:nowrap;}
+.time-display{font-size:13px;color:var(--ink-mid);font-style:italic;}
+.notes-display{font-size:13px;color:var(--ink-mid);line-height:1.65;white-space:pre-wrap;}
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 24px;margin-bottom:14px;}
+.edit-field{display:flex;flex-direction:column;gap:5px;}
+.edit-field.full{grid-column:1/-1;}
+.edit-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-light);}
+.field-input,.field-textarea{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);border:1px solid var(--border);border-radius:4px;padding:8px 10px;background:var(--surface-2);outline:none;transition:border-color .15s;width:100%;}
+.field-input:focus,.field-textarea:focus{border-color:var(--accent-rule);}
+.field-textarea{resize:vertical;min-height:80px;line-height:1.6;}
+.tag-input-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;border:1px solid var(--border);border-radius:4px;padding:6px 8px;background:var(--surface-2);min-height:38px;}
+.tag-input-row:focus-within{border-color:var(--accent-rule);}
+.tag-chip{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:3px;background:var(--accent-light);color:var(--accent);}
+.tag-chip-remove{cursor:pointer;font-size:11px;color:var(--accent);opacity:.6;}
+.tag-chip-remove:hover{opacity:1;}
+.tag-inline-input{border:none;outline:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink);min-width:80px;flex:1;}
+.tag-inline-input::placeholder{color:var(--ink-light);font-style:italic;}
+.edit-actions{display:flex;gap:8px;margin-top:4px;align-items:center;}
+.btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 14px;border-radius:4px;cursor:pointer;border:1px solid transparent;transition:all .15s;}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-primary:hover{background:#234038;}
+.btn-ghost{background:transparent;color:var(--ink-mid);border-color:var(--border);}
+.btn-ghost:hover{background:#f0ede8;}
+.btn-danger{background:transparent;color:var(--red);border-color:#e0aca7;margin-left:auto;}
+.btn-danger:hover{background:var(--red-light);}
+.add-deliverable-btn{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;color:var(--ink-light);padding:9px 14px;border:1px dashed var(--border);border-radius:6px;background:transparent;cursor:pointer;width:100%;margin-top:4px;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.add-deliverable-btn:hover{border-color:var(--accent-rule);color:var(--accent);background:var(--accent-light);}
+.add-phase-btn{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--ink-light);padding:11px 18px;border:1px dashed var(--border);border-radius:6px;background:transparent;cursor:pointer;width:100%;margin-top:8px;font-family:'DM Serif Display',serif;font-style:italic;transition:all .15s;}
+.add-phase-btn:hover{border-color:var(--accent-rule);color:var(--accent);background:var(--accent-light);}
+.add-issue-btn{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;color:var(--issue-accent);padding:9px 14px;border:1px dashed var(--issue-border);border-radius:6px;background:transparent;cursor:pointer;width:100%;margin-top:6px;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.add-issue-btn:hover{background:var(--issue-accent-light);border-color:var(--issue-accent);}
+.dot-0{background:#2c4a3e;}.dot-1{background:#3d3228;}.dot-2{background:#2a3545;}.dot-3{background:#4a3828;}.dot-4{background:#2a3a4a;}.dot-5{background:#3a2a45;}
+.footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);font-size:11px;color:var(--ink-light);display:flex;justify-content:space-between;align-items:center;gap:12px;}
+@media(max-width:600px){.detail-grid,.edit-grid{grid-template-columns:1fr;}.edit-field.full{grid-column:1;}.masthead{flex-direction:column;}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div id="auth-screen">
+  <div>
+    <div class="auth-title">Design Deliverables Index</div>
+    <p class="auth-sub">Bellweather Design-Build &mdash; Design Department. Sign in with your Microsoft account to load and save data.</p>
+  </div>
+  <button class="btn-signin" id="btn-signin">Sign in with Microsoft</button>
+  <div id="auth-error"></div>
+</div>
+
+<div id="app-screen">
+  <div id="status-bar"><div class="status-spinner" id="status-spinner"></div><span id="status-text"></span></div>
+  <div class="masthead">
+    <div>
+      <div class="masthead-label">Bellweather Design-Build &middot; Design Department</div>
+      <h1>Design Deliverables Index</h1>
+      <p class="masthead-sub">A working reference of deliverables by phase &mdash; what each item does, what it doesn&rsquo;t, and what it requires to produce.</p>
+    </div>
+    <div class="masthead-right">
+      <div class="user-badge" id="user-badge"></div>
+      <button class="btn-signout" id="btn-signout">Sign out</button>
+    </div>
+  </div>
+  <div class="issues-section">
+    <div class="section-label">Key Issues</div>
+    <div id="issues-list"></div>
+    <button class="add-issue-btn" id="add-issue-btn">+ Add Issue</button>
+  </div>
+  <div class="phases-section">
+    <div class="section-label">Deliverables by Phase</div>
+    <div id="phases-list"></div>
+    <button class="add-phase-btn" id="add-phase-btn">+ Add Phase</button>
+  </div>
+  <div class="footer">
+    <span>Working document &mdash; internal use only.</span>
+    <span id="last-saved" style="font-style:italic;"></span>
+  </div>
+</div>
+
+</div>
+<script>
+// ================================================================
+// CONFIGURATION — fill in before pushing to GitHub
+// SharePoint list: "DeliverableIndex", column: "StateData" (Multiple lines of text)
+// ================================================================
+var CONFIG = {
+  tenantId:           'YOUR_TENANT_ID',
+  clientId:           'YOUR_CLIENT_ID',
+  sharepointHost:     'YOUR_TENANT.sharepoint.com',
+  sharepointSitePath: '/sites/YOUR_SITE',
+  listName:           'DeliverableIndex'
+};
+var REDIRECT_URI = 'https://chicophilly.github.io/bellweather-tools/design-deliverables.html';
+var SCOPES = ['https://graph.microsoft.com/Sites.ReadWrite.All'];
+var NUMERALS = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
+// ================================================================
+
+var msalApp = new msal.PublicClientApplication({
+  auth: { clientId: CONFIG.clientId, authority: 'https://login.microsoftonline.com/' + CONFIG.tenantId, redirectUri: REDIRECT_URI },
+  cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
+});
+
+var graphCtx = { siteId: null, listId: null, itemId: null };
+var state;
+
+var DEFAULT_DATA = {
+  issues: [{
+    id: 'iss1',
+    title: 'Renderings Are Not the Source of Truth',
+    related: ['Renderings — Conceptual', 'Renderings — Tile + Countertop Schemes'],
+    body: 'Renderings — especially early conceptual ones — can take on an authority they were never intended to carry. Because they look photographic, clients (and sometimes team members) treat them as the definitive record of what was approved. They are not.\n\nThe line drawings from Chief Architect are the authoritative, up-to-date document of record. They reflect actual dimensions, clearances, and coordination decisions. A rendering made during initial design is a proposal — it communicates spatial direction and material character, not specifications.\n\nThe conflict: the more compelling a rendering looks, the more likely it is to become the client\'s mental image of "what we agreed to." This creates a gap when the built result differs from an idealized render — even when the built result is exactly what was drawn and approved in the construction documents.\n\nThis needs to be addressed in how we introduce renderings to clients, how we frame their purpose at each phase, and possibly in how we label or caveat rendered deliverables.'
+  }],
+  phases: [
+    { id: 'ph1', title: 'Initial / Conceptual Design', subtitle: 'In-Person Presentation', deliverables: [
+      { id: 'dl1', name: 'Floor Plans', tool: 'Sketch then Chief Architect', sharing: ['In-Person', 'Virtual Follow-Up'], what: '2-4 layout options at conceptual stage. Begins as hand sketches, then developed in Chief Architect.', doesNot: 'Does not include elevations, detailed dimensions, or construction-ready documentation at this stage.', time: '', notes: '' },
+      { id: 'dl2', name: 'Renderings — Conceptual', tool: 'Chief Architect', sharing: ['In-Person', 'Virtual Follow-Up'], what: '2-3 views per floor plan option. Conveys spatial character, light, and material direction — enough for clients to react and choose a direction.', doesNot: 'Does not reflect specific selections. Materials are representative, not final. Not the source of truth — see Key Issues.', time: '', notes: '' },
+      { id: 'dl3', name: 'Presentation Package', tool: 'InDesign then PDF and Print', sharing: ['In-Person (printed)', 'Email (PDF)'], what: 'Formatted InDesign document incorporating floor plans and renderings. Printed for the meeting; PDFed and emailed as follow-up.', doesNot: 'Not a construction document. No dimensions or specifications. Not intended for contractor use.', time: '', notes: '' },
+      { id: 'dl4', name: 'Revised / Hybrid Plan Options', tool: 'Chief Architect', sharing: ['Email (Virtual)'], what: '1-2 hybrid plan options synthesizing client feedback. Typically includes 2-3 renderings per option.', doesNot: 'Still conceptual — not yet detailed enough for selections or contractor review.', time: '', notes: '' }
+    ]},
+    { id: 'ph2', title: 'Plan Detailing + Selection Process', subtitle: 'In-Person Meetings + Teams/Virtual — primarily post-Tier 1', deliverables: [
+      { id: 'dl5', name: 'Renderings — Tile + Countertop Schemes', tool: 'Chief Architect', sharing: ['In-Person', 'Email/Virtual'], what: 'Additional renderings showing specific material options — tile and countertop combinations. Used to help clients evaluate schemes before committing.', doesNot: 'Not a final composite of all selected materials. Subject to same source-of-truth caveat as conceptual renderings.', time: '', notes: '' },
+      { id: 'dl6', name: 'Revised Plans + Elevations', tool: 'Chief Architect', sharing: ['In-Person', 'Email/Virtual'], what: 'Updated floor plans and elevations incorporating layout feedback. Elevations begin to document cabinetry heights, opening sizes, and spatial relationships.', doesNot: 'Not yet construction drawings. Not fully coordinated for permit or contractor use.', time: '', notes: '' },
+      { id: 'dl7', name: 'Moodboards', tool: 'Canva', sharing: ['Email (drip/communication flow)'], what: 'Visual reference boards for Tier 2 + 3 options. Communicate material direction, finish families, and aesthetic tone.', doesNot: 'Not a selections record. Does not replace BuilderTrend entries. Aspirational and directional, not specification-grade.', time: '', notes: '' },
+      { id: 'dl8', name: 'Selection Uploads to BuilderTrend', tool: 'BuilderTrend', sharing: ['Discussed In-Person', 'Available Online as Reference'], what: 'Each selection entered with description, hyperlink, images, and spec sheets. Creates the client-facing and operational record for ordering and scheduling.', doesNot: 'Does not replace the in-person discussion. Accuracy depends on manual synchronization across platforms.', time: '', notes: '' }
+    ]},
+    { id: 'ph3', title: 'Prep for CA Signing / CA Signing', subtitle: 'Virtual Design Wrap-Up then Collateral for Signing', deliverables: [
+      { id: 'dl9', name: 'Drawings Package', tool: 'Chief Architect then PDF', sharing: ['Virtual Design Wrap-Up Meeting', 'Email (Signing Collateral)'], what: 'Compiled PDF of plans, elevations, and renderings representing the approved design intent for the Construction Agreement.', doesNot: 'Not a permit set or construction document package. Structural, MEP, and code-compliance documentation handled separately.', time: '', notes: '' },
+      { id: 'dl10', name: 'Selections Package', tool: 'BuilderTrend then PDF', sharing: ['Virtual Design Wrap-Up Meeting', 'Email (Signing Collateral)'], what: 'Compiled PDF of the selections record — all approved material choices captured for the Construction Agreement.', doesNot: 'Does not capture pending or under-review selections. Represents state of selections at time of CA only.', time: '', notes: '' }
+    ]}
+  ]
+};
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function uid() { return 'x' + Math.random().toString(36).slice(2,10); }
+
+function setStatus(msg, isErr, spin) {
+  var bar = document.getElementById('status-bar');
+  var txt = document.getElementById('status-text');
+  document.getElementById('status-spinner').style.display = spin ? 'block' : 'none';
+  if (!msg) { bar.classList.remove('visible','error'); return; }
+  txt.textContent = msg;
+  bar.classList.toggle('error', !!isErr);
+  bar.classList.add('visible');
+}
+
+function getAccount() {
+  var accs = msalApp.getAllAccounts();
+  return accs.length ? accs[0] : null;
+}
+
+async function getToken() {
+  var acc = getAccount();
+  if (!acc) throw new Error('Not signed in');
+  try {
+    var r = await msalApp.acquireTokenSilent({ scopes: SCOPES, account: acc });
+    return r.accessToken;
+  } catch(e) {
+    // Silent failed — redirect to re-authenticate
+    await msalApp.acquireTokenRedirect({ scopes: SCOPES, account: acc });
+    throw new Error('Redirecting for token...');
+  }
+}
+
+async function graphReq(method, path, body) {
+  var token = await getToken();
+  var opts = { method: method, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  var resp = await fetch('https://graph.microsoft.com/v1.0' + path, opts);
+  if (!resp.ok) { var t = await resp.text(); throw new Error(resp.status + ' ' + t); }
+  if (resp.status === 204) return null;
+  return resp.json();
+}
+
+async function resolveIds() {
+  var site = await graphReq('GET', '/sites/' + CONFIG.sharepointHost + ':' + CONFIG.sharepointSitePath);
+  graphCtx.siteId = site.id;
+  var lists = await graphReq('GET', '/sites/' + graphCtx.siteId + '/lists?$filter=displayName eq \'' + CONFIG.listName + '\'&$select=id');
+  if (!lists.value || !lists.value.length) throw new Error('List "' + CONFIG.listName + '" not found. Create it with a StateData column (Multiple lines of text).');
+  graphCtx.listId = lists.value[0].id;
+}
+
+async function loadData() {
+  setStatus('Loading...', false, true);
+  var data = await graphReq('GET', '/sites/' + graphCtx.siteId + '/lists/' + graphCtx.listId + '/items?$expand=fields($select=StateData)&$top=1');
+  if (data.value && data.value.length) {
+    graphCtx.itemId = data.value[0].id;
+    try { state = JSON.parse(data.value[0].fields.StateData); } catch(e) { state = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+  } else {
+    graphCtx.itemId = null;
+    state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  }
+  render();
+  setStatus('', false, false);
+}
+
+async function saveData() {
+  setStatus('Saving...', false, true);
+  try {
+    var payload = JSON.stringify(state);
+    if (graphCtx.itemId === null) {
+      var created = await graphReq('POST', '/sites/' + graphCtx.siteId + '/lists/' + graphCtx.listId + '/items', { fields: { StateData: payload } });
+      graphCtx.itemId = created.id;
+    } else {
+      await graphReq('PATCH', '/sites/' + graphCtx.siteId + '/lists/' + graphCtx.listId + '/items/' + graphCtx.itemId + '/fields', { StateData: payload });
+    }
+    setStatus('', false, false);
+    document.getElementById('last-saved').textContent = 'Saved ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  } catch(e) {
+    setStatus('Save failed: ' + (e.message || e), true, false);
+  }
+}
+
+async function signIn() {
+  try {
+    document.getElementById('auth-error').style.display = 'none';
+    await msalApp.loginRedirect({ scopes: SCOPES });
+    // page will redirect; execution stops here
+  } catch(e) {
+    var el = document.getElementById('auth-error');
+    el.textContent = 'Sign-in failed: ' + (e.message || e);
+    el.style.display = 'block';
+  }
+}
+
+function signOut() {
+  msalApp.logoutRedirect({ account: getAccount() });
+}
+
+async function onSignedIn() {
+  var acc = getAccount();
+  if (!acc) return;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  document.getElementById('user-badge').textContent = acc.name || acc.username;
+  setStatus('Connecting to SharePoint...', false, true);
+  try {
+    await resolveIds();
+    await loadData();
+  } catch(e) {
+    setStatus('Could not connect: ' + (e.message || e), true, false);
+    state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    render();
+  }
+}
+
+// ── RENDER ──────────────────────────────────────────────────────────
+
+function render() { renderIssues(); renderPhases(); }
+
+function findIssue(id) { for (var i=0;i<state.issues.length;i++) { if (state.issues[i].id===id) return state.issues[i]; } return null; }
+function findPhase(id) { for (var i=0;i<state.phases.length;i++) { if (state.phases[i].id===id) return state.phases[i]; } return null; }
+function findDl(id) {
+  for (var pi=0;pi<state.phases.length;pi++) {
+    var ph = state.phases[pi];
+    for (var di=0;di<ph.deliverables.length;di++) { if (ph.deliverables[di].id===id) return { d: ph.deliverables[di], phase: ph }; }
+  }
+  return null;
+}
+
+// ── ISSUES ──────────────────────────────────────────────────────────
+
+function renderIssues() {
+  var el = document.getElementById('issues-list');
+  el.innerHTML = '';
+  for (var i=0;i<state.issues.length;i++) el.appendChild(buildIssueCard(state.issues[i]));
+}
+
+function buildIssueCard(issue) {
+  var card = document.createElement('div');
+  card.className = 'issue-card';
+  card.setAttribute('data-issue-id', issue.id);
+  var meta = issue.related && issue.related.length ? 'Related: ' + issue.related.join(', ') : '';
+  var relTags = '';
+  if (issue.related && issue.related.length) {
+    for (var i=0;i<issue.related.length;i++) relTags += '<span class="issue-related-tag">'+esc(issue.related[i])+'</span>';
+  }
+  card.innerHTML = ''
+    +'<div class="issue-header" data-action="toggle-issue">'
+    +'<div class="issue-toggle">+</div>'
+    +'<div class="issue-title-row"><div class="issue-title">'+esc(issue.title)+'</div>'+(meta?'<div class="issue-meta">'+esc(meta)+'</div>':'')+'</div>'
+    +'<button class="icon-btn danger" data-action="delete-issue">&#10005;</button>'
+    +'</div>'
+    +'<div class="issue-body">'
+    +'<div class="issue-view">'
+    +'<div class="issue-description">'+esc(issue.body)+'</div>'
+    +(relTags?'<div class="issue-related-label">Related Deliverables</div><div class="issue-related-tags">'+relTags+'</div>':'')
+    +'<div style="margin-top:12px;"><button class="btn btn-ghost" style="font-size:11px;padding:5px 10px;" data-action="edit-issue">Edit</button></div>'
+    +'</div>'
+    +'<div class="issue-edit-form" style="display:none;">'
+    +'<div style="display:flex;flex-direction:column;gap:10px;">'
+    +'<div class="edit-field"><div class="edit-label">Issue Title</div><input class="field-input" data-role="ititle" value="'+esc(issue.title)+'"></div>'
+    +'<div class="edit-field"><div class="edit-label">Description</div><textarea class="field-textarea" data-role="ibody" style="min-height:140px;">'+esc(issue.body)+'</textarea></div>'
+    +'<div class="edit-field"><div class="edit-label">Related Deliverables (comma-separated)</div><input class="field-input" data-role="irelated" value="'+esc((issue.related||[]).join(', '))+'"></div>'
+    +'</div>'
+    +'<div class="edit-actions" style="margin-top:10px;">'
+    +'<button class="btn btn-primary" data-action="save-issue">Save</button>'
+    +'<button class="btn btn-ghost" data-action="cancel-issue">Cancel</button>'
+    +'</div></div></div>';
+  return card;
+}
+
+function toggleIssue(card) {
+  var open = card.classList.toggle('open');
+  card.querySelector('.issue-toggle').textContent = open ? '−' : '+';
+}
+function editIssue(card) {
+  card.classList.add('open');
+  card.querySelector('.issue-toggle').textContent = '−';
+  card.querySelector('.issue-view').style.display = 'none';
+  card.querySelector('.issue-edit-form').style.display = 'block';
+}
+function cancelIssue(card) {
+  card.querySelector('.issue-view').style.display = 'block';
+  card.querySelector('.issue-edit-form').style.display = 'none';
+}
+function saveIssue(card) {
+  var id = card.getAttribute('data-issue-id');
+  var issue = findIssue(id);
+  if (!issue) return;
+  issue.title = card.querySelector('[data-role="ititle"]').value.trim();
+  issue.body = card.querySelector('[data-role="ibody"]').value.trim();
+  issue.related = card.querySelector('[data-role="irelated"]').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  saveData();
+  renderIssues();
+  var nc = document.querySelector('[data-issue-id="'+id+'"]');
+  if (nc) { nc.classList.add('open'); nc.querySelector('.issue-toggle').textContent='−'; }
+}
+function deleteIssue(card) {
+  var id = card.getAttribute('data-issue-id');
+  if (!confirm('Remove this issue?')) return;
+  state.issues = state.issues.filter(function(i){return i.id!==id;});
+  saveData(); renderIssues();
+}
+function addIssue() {
+  var issue = { id: uid(), title: 'New Issue', related: [], body: '' };
+  state.issues.push(issue);
+  renderIssues();
+  var card = document.querySelector('[data-issue-id="'+issue.id+'"]');
+  if (card) { editIssue(card); card.querySelector('[data-role="ititle"]').focus(); card.querySelector('[data-role="ititle"]').select(); }
+}
+
+// ── PHASES ──────────────────────────────────────────────────────────
+
+function renderPhases() {
+  var el = document.getElementById('phases-list');
+  el.innerHTML = '';
+  for (var i=0;i<state.phases.length;i++) el.appendChild(buildPhaseRow(state.phases[i], i));
+}
+
+function buildPhaseRow(phase, index) {
+  var isLast = index === state.phases.length - 1;
+  var row = document.createElement('div');
+  row.className = 'phase-row';
+  row.setAttribute('data-phase-id', phase.id);
+  var num = NUMERALS[index] || String(index+1);
+  row.innerHTML = ''
+    +'<div class="phase-track"><div class="phase-dot dot-'+(index%6)+'">'+num+'</div>'+(isLast?'':'<div class="phase-line"></div>')+'</div>'
+    +'<div class="phase-content">'
+    +'<div class="phase-title-block">'
+    +'<div class="phase-title-display">'
+    +'<div class="phase-title-text"><div class="phase-title">'+esc(phase.title)+'</div><div class="phase-subtitle">'+esc(phase.subtitle)+'</div></div>'
+    +'<button class="icon-btn" data-action="edit-phase">&#9998;</button>'
+    +'<button class="icon-btn danger" data-action="delete-phase">&#10005;</button>'
+    +'</div>'
+    +'<div class="phase-edit-form">'
+    +'<div style="display:flex;flex-direction:column;gap:6px;">'
+    +'<input class="field-input" data-role="ptitle" value="'+esc(phase.title)+'" placeholder="Phase title">'
+    +'<input class="field-input" data-role="psub" value="'+esc(phase.subtitle)+'" placeholder="Subtitle / context">'
+    +'</div>'
+    +'<div class="edit-actions" style="margin-top:8px;">'
+    +'<button class="btn btn-primary" data-action="save-phase">Save</button>'
+    +'<button class="btn btn-ghost" data-action="cancel-phase">Cancel</button>'
+    +'</div></div></div>'
+    +'<div class="deliverables-list" data-dl-list="'+esc(phase.id)+'"></div>'
+    +'<button class="add-deliverable-btn" data-action="add-dl">+ Add Deliverable</button>'
+    +'</div>';
+  var list = row.querySelector('[data-dl-list]');
+  for (var i=0;i<phase.deliverables.length;i++) list.appendChild(buildDlCard(phase.deliverables[i], phase.id));
+  return row;
+}
+
+function editPhase(row) {
+  row.querySelector('.phase-title-display').style.display = 'none';
+  row.querySelector('.phase-edit-form').style.display = 'block';
+  row.querySelector('[data-role="ptitle"]').focus();
+}
+function cancelPhase(row) {
+  row.querySelector('.phase-title-display').style.display = 'flex';
+  row.querySelector('.phase-edit-form').style.display = 'none';
+}
+function savePhase(row) {
+  var id = row.getAttribute('data-phase-id');
+  var ph = findPhase(id);
+  if (!ph) return;
+  ph.title = row.querySelector('[data-role="ptitle"]').value.trim();
+  ph.subtitle = row.querySelector('[data-role="psub"]').value.trim();
+  saveData(); renderPhases();
+}
+function deletePhase(row) {
+  var id = row.getAttribute('data-phase-id');
+  if (!confirm('Delete this phase and all its deliverables?')) return;
+  state.phases = state.phases.filter(function(p){return p.id!==id;});
+  saveData(); renderPhases();
+}
+function addPhase() {
+  var ph = { id: uid(), title: 'New Phase', subtitle: '', deliverables: [] };
+  state.phases.push(ph);
+  renderPhases();
+  var row = document.querySelector('[data-phase-id="'+ph.id+'"]');
+  if (row) editPhase(row);
+}
+
+// ── DELIVERABLES ────────────────────────────────────────────────────
+
+function chipHtml(val) {
+  return '<span class="tag-chip" data-chip-val="'+esc(val)+'">'+esc(val)+'<span class="tag-chip-remove" data-action="remove-chip">&#10005;</span></span>';
+}
+function chipEl(val) {
+  var s = document.createElement('span');
+  s.className = 'tag-chip'; s.setAttribute('data-chip-val', val);
+  s.innerHTML = esc(val)+'<span class="tag-chip-remove" data-action="remove-chip">&#10005;</span>';
+  return s;
+}
+
+function buildDlCard(d, phaseId) {
+  var card = document.createElement('div');
+  card.className = 'deliverable';
+  card.setAttribute('data-dl-id', d.id);
+  card.setAttribute('data-phase-id', phaseId);
+  var shareView = '';
+  for (var i=0;i<d.sharing.length;i++) shareView += '<span class="tag tag-share">'+esc(d.sharing[i])+'</span>';
+  var shareChips = '';
+  for (var j=0;j<d.sharing.length;j++) shareChips += chipHtml(d.sharing[j]);
+  var timeView = d.time ? esc(d.time) : '<em>not yet estimated</em>';
+  var notesHtml = d.notes ? '<div style="margin-top:10px;"><div class="detail-label" style="margin-bottom:5px;">Notes</div><div class="notes-display">'+esc(d.notes)+'</div></div>' : '';
+  card.innerHTML = ''
+    +'<div class="deliverable-header">'
+    +'<div class="deliverable-toggle" data-action="toggle-dl">+</div>'
+    +'<div class="deliverable-name" data-action="toggle-dl">'+esc(d.name)+'</div>'
+    +'<div style="display:flex;gap:6px;"><span class="tag tag-tool">'+esc(d.tool)+'</span></div>'
+    +'<button class="icon-btn" data-action="edit-dl">&#9998;</button>'
+    +'<button class="icon-btn danger" data-action="delete-dl">&#10005;</button>'
+    +'</div>'
+    +'<div class="deliverable-body">'
+    +'<div class="view-mode">'
+    +'<div class="detail-grid">'
+    +'<div><div class="detail-label">What It Does</div><div class="detail-text">'+esc(d.what)+'</div></div>'
+    +'<div><div class="detail-label">What It Does Not Do</div><div class="detail-text">'+esc(d.doesNot)+'</div></div>'
+    +'<div><div class="detail-label">How It\'s Shared</div><div class="sharing-tags">'+shareView+'</div></div>'
+    +'</div>'
+    +'<div class="time-row"><div class="detail-label">Time / Input Required</div><div class="time-display">'+timeView+'</div></div>'
+    +notesHtml
+    +'</div>'
+    +'<div class="edit-mode">'
+    +'<div class="edit-grid">'
+    +'<div class="edit-field full"><div class="edit-label">Deliverable Name</div><input class="field-input" data-role="dl-name" value="'+esc(d.name)+'"></div>'
+    +'<div class="edit-field full"><div class="edit-label">Tool / Software</div><input class="field-input" data-role="dl-tool" value="'+esc(d.tool)+'"></div>'
+    +'<div class="edit-field"><div class="edit-label">What It Does</div><textarea class="field-textarea" data-role="dl-what">'+esc(d.what)+'</textarea></div>'
+    +'<div class="edit-field"><div class="edit-label">What It Does Not Do</div><textarea class="field-textarea" data-role="dl-doesnot">'+esc(d.doesNot)+'</textarea></div>'
+    +'<div class="edit-field full"><div class="edit-label">How It\'s Shared &mdash; Enter or comma to add</div>'
+    +'<div class="tag-input-row" data-role="dl-tag-row">'+shareChips+'<input class="tag-inline-input" data-role="dl-tag-input" placeholder="Add sharing method..."></div></div>'
+    +'<div class="edit-field"><div class="edit-label">Time / Input Required</div><input class="field-input" data-role="dl-time" value="'+esc(d.time)+'" placeholder="e.g. 2-3 hrs per option"></div>'
+    +'<div class="edit-field"><div class="edit-label">Notes</div><textarea class="field-textarea" data-role="dl-notes" style="min-height:60px;">'+esc(d.notes)+'</textarea></div>'
+    +'</div>'
+    +'<div class="edit-actions">'
+    +'<button class="btn btn-primary" data-action="save-dl">Save</button>'
+    +'<button class="btn btn-ghost" data-action="cancel-dl">Cancel</button>'
+    +'<button class="btn btn-danger" data-action="delete-dl">Delete</button>'
+    +'</div></div></div>';
+  var ti = card.querySelector('[data-role="dl-tag-input"]');
+  ti.addEventListener('keydown', function(e) {
+    if (e.key==='Enter'||e.key===',') {
+      e.preventDefault();
+      var val = ti.value.replace(',','').trim();
+      if (val) { card.querySelector('[data-role="dl-tag-row"]').insertBefore(chipEl(val), ti); ti.value=''; }
+    }
+  });
+  return card;
+}
+
+function toggleDl(card) {
+  if (card.classList.contains('editing')) return;
+  var open = card.classList.toggle('open');
+  card.querySelector('.deliverable-toggle').textContent = open ? '−' : '+';
+}
+function editDl(card) {
+  card.classList.add('editing','open');
+  card.querySelector('.deliverable-toggle').textContent = '−';
+}
+function cancelDl(card) {
+  card.classList.remove('editing');
+  card.querySelector('.deliverable-toggle').textContent = '−';
+}
+function saveDl(card) {
+  var id = card.getAttribute('data-dl-id');
+  var phaseId = card.getAttribute('data-phase-id');
+  var found = findDl(id);
+  if (!found) return;
+  var d = found.d;
+  d.name    = card.querySelector('[data-role="dl-name"]').value.trim();
+  d.tool    = card.querySelector('[data-role="dl-tool"]').value.trim();
+  d.what    = card.querySelector('[data-role="dl-what"]').value.trim();
+  d.doesNot = card.querySelector('[data-role="dl-doesnot"]').value.trim();
+  d.time    = card.querySelector('[data-role="dl-time"]').value.trim();
+  d.notes   = card.querySelector('[data-role="dl-notes"]').value.trim();
+  var chips = card.querySelectorAll('[data-role="dl-tag-row"] .tag-chip');
+  var inline = card.querySelector('[data-role="dl-tag-input"]').value.trim();
+  d.sharing = [];
+  chips.forEach(function(c){d.sharing.push(c.getAttribute('data-chip-val'));});
+  if (inline) d.sharing.push(inline);
+  saveData();
+  var list = document.querySelector('[data-dl-list="'+phaseId+'"]');
+  var nc = buildDlCard(d, phaseId);
+  nc.classList.add('open');
+  nc.querySelector('.deliverable-toggle').textContent = '−';
+  list.replaceChild(nc, card);
+}
+function deleteDl(card) {
+  var id = card.getAttribute('data-dl-id');
+  var phaseId = card.getAttribute('data-phase-id');
+  if (!confirm('Remove this deliverable?')) return;
+  var ph = findPhase(phaseId);
+  if (!ph) return;
+  ph.deliverables = ph.deliverables.filter(function(d){return d.id!==id;});
+  saveData(); card.remove();
+}
+function addDl(phaseId) {
+  var ph = findPhase(phaseId);
+  if (!ph) return;
+  var d = { id: uid(), name: 'New Deliverable', tool: '', sharing: [], what: '', doesNot: '', time: '', notes: '' };
+  ph.deliverables.push(d);
+  var list = document.querySelector('[data-dl-list="'+phaseId+'"]');
+  var card = buildDlCard(d, phaseId);
+  card.classList.add('editing','open');
+  card.querySelector('.deliverable-toggle').textContent = '−';
+  list.appendChild(card);
+  card.querySelector('[data-role="dl-name"]').focus();
+  card.querySelector('[data-role="dl-name"]').select();
+}
+
+// ── EVENT DELEGATION ─────────────────────────────────────────────────
+
+document.addEventListener('click', function(e) {
+  var t = e.target;
+  if (t.getAttribute('data-action')==='remove-chip') { t.closest('.tag-chip').remove(); return; }
+  var a = t.closest('[data-action]');
+  if (!a) return;
+  var action = a.getAttribute('data-action');
+  if (a.id==='btn-signin')     { signIn(); return; }
+  if (a.id==='btn-signout')    { signOut(); return; }
+  if (a.id==='add-issue-btn')  { addIssue(); return; }
+  if (a.id==='add-phase-btn')  { addPhase(); return; }
+  var ic = a.closest('[data-issue-id]');
+  if (ic) {
+    if (action==='toggle-issue') { toggleIssue(ic); return; }
+    if (action==='delete-issue') { e.stopPropagation(); deleteIssue(ic); return; }
+    if (action==='edit-issue')   { editIssue(ic); return; }
+    if (action==='save-issue')   { saveIssue(ic); return; }
+    if (action==='cancel-issue') { cancelIssue(ic); return; }
+  }
+  var dc = a.closest('[data-dl-id]');
+  if (dc) {
+    if (action==='toggle-dl') { toggleDl(dc); return; }
+    if (action==='edit-dl')   { editDl(dc); return; }
+    if (action==='cancel-dl') { cancelDl(dc); return; }
+    if (action==='save-dl')   { saveDl(dc); return; }
+    if (action==='delete-dl') { deleteDl(dc); return; }
+  }
+  var pr = a.closest('[data-phase-id]');
+  if (pr) {
+    if (action==='edit-phase')   { editPhase(pr); return; }
+    if (action==='cancel-phase') { cancelPhase(pr); return; }
+    if (action==='save-phase')   { savePhase(pr); return; }
+    if (action==='delete-phase') { deletePhase(pr); return; }
+    if (action==='add-dl')       { addDl(pr.getAttribute('data-phase-id')); return; }
+  }
+});
+
+window.addEventListener("load", async function() {
+  document.getElementById('btn-signin').addEventListener('click', signIn);
+  document.getElementById('btn-signout').addEventListener('click', signOut);
+  try {
+    var redirectResult = await msalApp.handleRedirectPromise();
+    if (redirectResult) {
+      // Returned from a login redirect — account is now set
+      await onSignedIn();
+    } else if (getAccount()) {
+      // Already signed in from a previous session
+      await onSignedIn();
+    }
+  } catch(e) {
+    var el = document.getElementById('auth-error');
+    el.textContent = 'Init error: ' + (e.message || e);
+    el.style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>
