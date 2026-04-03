@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SharePoint Sherpa · Bellweather</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1f2e3e;--gold:#d8b64f;--gold-light:#f9e6ae;--gold-pale:rgba(216,182,79,0.10);
+  --bg:#f5f3ee;--surface:#fff;--border:#e4dac4;--border-soft:rgba(228,218,196,0.55);
+  --text:#1f2e3e;--sec:#7a7a7a;--muted:#a3a3a3;
+  --permit:#9b6127;--permit-light:#fff0c7;
+  --ok:#00521b;--err:#a30a0a;
+  --r:8px;--rl:12px;
+}
+html,body{height:100%}
+body{font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh;display:flex;flex-direction:column}
+
+/* HEADER */
+.hdr{background:var(--navy);height:50px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.hdr-brand{display:flex;align-items:center;gap:10px}
+.hdr-mark{width:28px;height:28px;border-radius:6px;background:var(--gold);display:flex;align-items:center;justify-content:center}
+.hdr-name{font-family:'Fraunces',serif;font-size:16px;font-weight:400;color:#fff}
+.hdr-scope{font-size:11px;color:var(--gold);margin-top:1px}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.vbadge{font-size:10px;color:rgba(255,255,255,0.3)}
+.hdr-btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:5px 13px;border-radius:20px;cursor:pointer;border:0.5px solid rgba(216,182,79,0.4);background:rgba(216,182,79,0.1);color:var(--gold)}
+.hdr-btn:hover{background:rgba(216,182,79,0.2)}
+
+/* BODY */
+.body{flex:1;display:flex;overflow:hidden}
+
+/* AUTH SCREEN */
+#auth-screen{flex:1;display:flex;align-items:center;justify-content:center}
+.auth-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--rl);padding:40px 48px;text-align:center;max-width:340px}
+.auth-card h2{font-family:'Fraunces',serif;font-size:22px;font-weight:400;color:var(--navy);margin-bottom:8px}
+.auth-card p{font-size:13px;color:var(--sec);margin-bottom:24px;line-height:1.6}
+.auth-go{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:10px 0;border-radius:var(--r);cursor:pointer;background:var(--navy);color:var(--gold);border:none;width:100%}
+.auth-go:hover{background:#2a3e54}
+
+/* MAIN */
+#main-ui{flex:1;display:none;overflow:hidden}
+
+/* SEARCH PANEL */
+.search-panel{width:calc(100% - 300px);display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--surface)}
+.panel-head{padding:10px 20px 8px;border-bottom:0.5px solid var(--border-soft)}
+.panel-head h2{font-family:'Fraunces',serif;font-size:15px;font-weight:400;color:var(--navy)}
+.panel-head p{font-size:11px;color:var(--sec);margin-top:1px}
+
+.search-row{padding:10px 20px;display:flex;gap:8px;border-bottom:0.5px solid var(--border-soft)}
+#search-input{flex:1;border:0.5px solid var(--border);border-radius:var(--r);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);color:var(--text);outline:none}
+#search-input:focus{border-color:var(--gold);background:var(--surface)}
+#search-input::placeholder{color:var(--muted)}
+.search-btn{font-family:'DM Sans',sans-serif;padding:8px 16px;border-radius:var(--r);background:var(--navy);color:var(--gold);border:none;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap}
+.search-btn:hover{background:#2a3e54}
+.search-btn:disabled{opacity:0.5;cursor:not-allowed}
+
+.filter-bar{padding:7px 20px 9px;border-bottom:0.5px solid var(--border-soft);display:flex;flex-wrap:wrap;gap:12px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fgl{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{font-size:11px;padding:3px 8px;border-radius:20px;border:0.5px solid var(--border);color:var(--sec);background:var(--bg);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .1s}
+.chip:hover{border-color:var(--gold)}
+.chip.on{background:var(--navy);color:var(--gold-light);border-color:var(--navy)}
+
+.results-hdr{padding:7px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--border-soft)}
+.r-count{font-size:11px;color:var(--sec)}
+.sel-all{font-size:11px;padding:3px 9px;border-radius:20px;background:var(--bg);border:0.5px solid var(--border);color:var(--sec);cursor:pointer;font-family:'DM Sans',sans-serif}
+.sel-all:hover{border-color:var(--gold)}
+
+.results-list{flex:1;overflow-y:auto;padding:10px 20px}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:var(--muted);text-align:center}
+.empty p{font-size:13px}.empty small{font-size:11px}
+
+.rrow{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:var(--r);border:0.5px solid var(--border-soft);margin-bottom:5px;background:var(--surface);transition:border-color .1s}
+.rrow:hover{border-color:var(--border)}
+.rrow.sel{border-color:var(--gold);background:var(--gold-pale)}
+.rcheck{width:15px;height:15px;border-radius:3px;border:0.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.rcheck.on{background:var(--navy);border-color:var(--navy)}
+.rcheck svg{display:none}.rcheck.on svg{display:block}
+.fdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.d-docx{background:#2b6cb0}.d-pdf{background:#c53030}.d-xlsx{background:#276749}
+.d-pptx{background:#c05621}.d-img{background:#6b46c1}.d-other{background:var(--muted)}
+.rinfo{flex:1;min-width:0;cursor:pointer}
+.rname{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rpath{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.rdate{font-size:10px;color:var(--muted);flex-shrink:0;white-space:nowrap}
+.rdl{flex-shrink:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:4px;border:0.5px solid var(--border);color:var(--sec);cursor:pointer;font-size:12px;transition:all .1s}
+.rdl:hover{border-color:var(--gold);color:var(--navy);background:var(--gold-pale)}
+
+.results-footer{padding:9px 20px;border-top:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface)}
+.scount{font-size:11px;color:var(--sec)}
+#dl-zip{font-family:'DM Sans',sans-serif;padding:7px 15px;border-radius:var(--r);background:var(--gold);color:var(--navy);border:none;font-size:12px;font-weight:500;cursor:pointer}
+#dl-zip:hover{background:#c9a840}
+#dl-zip:disabled{opacity:0.4;cursor:not-allowed}
+
+/* FILE PANEL */
+.file-panel{width:300px;flex-shrink:0;display:flex;flex-direction:column;background:var(--bg);overflow-y:auto}
+
+.drop-zone{margin:12px;border:1.5px dashed var(--border);border-radius:var(--r);padding:20px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--surface);cursor:pointer;transition:border-color .15s,background .15s}
+.drop-zone.over,.drop-zone:hover{border-color:var(--gold);background:var(--gold-pale)}
+.dz-icon{width:32px;height:32px;border-radius:7px;background:var(--bg);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center}
+.drop-zone h3{font-size:13px;font-weight:500;color:var(--text)}
+.drop-zone p{font-size:11px;color:var(--sec);line-height:1.5}
+.or-row{display:flex;align-items:center;gap:8px;margin:0 12px 0}
+.or-line{flex:1;height:0.5px;background:var(--border)}
+.or-txt{font-size:10px;color:var(--muted)}
+.bulk-zone{margin:8px 12px 12px;border:1.5px dashed var(--border);border-radius:var(--r);padding:14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:5px;background:var(--surface);cursor:pointer;transition:border-color .15s}
+.bulk-zone:hover{border-color:var(--gold)}
+.bulk-zone h3{font-size:12px;font-weight:500;color:var(--text)}
+.bulk-zone p{font-size:10px;color:var(--sec);line-height:1.5}
+
+.divider{height:0.5px;background:var(--border);margin:2px 0}
+
+/* ROUTE BUILDER */
+.route-builder{margin:10px 12px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px}
+.rb-label{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.pending-name{font-size:11px;font-weight:500;color:var(--text);word-break:break-word;margin-bottom:10px;padding:5px 8px;background:var(--bg);border-radius:4px}
+.rb-rows{display:flex;flex-direction:column;gap:6px}
+.rb-row{display:flex;flex-direction:column;gap:2px}
+.rb-row label{font-size:10px;color:var(--sec)}
+.rb-row select{font-family:'DM Sans',sans-serif;font-size:11px;padding:5px 8px;border-radius:5px;border:0.5px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;outline:none;width:100%}
+.rb-row select:focus{border-color:var(--gold)}
+.rb-note{font-size:10px;color:var(--muted);margin-top:8px;line-height:1.5}
+.confirm-btn{font-family:'DM Sans',sans-serif;width:100%;padding:7px;border-radius:var(--r);background:var(--permit);color:var(--permit-light);border:none;font-size:12px;font-weight:500;cursor:pointer;margin-top:10px}
+.confirm-btn:hover{background:#7d4e1f}
+.confirm-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+.rb-placeholder{margin:10px 12px;padding:14px;background:var(--surface);border:0.5px solid var(--border-soft);border-radius:var(--r);text-align:center}
+.rb-placeholder p{font-size:11px;color:var(--muted);line-height:1.6}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:7px 18px;border-radius:20px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .2s;z-index:999}
+#toast.show{opacity:1}
+#toast.err{background:var(--err)}
+#toast.ok{background:var(--ok)}
+
+.spin{display:inline-block;width:11px;height:11px;border:1.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes sp{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:#737373;border-radius:3px}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-mark">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 2L13 5.5V10.5L8 14L3 10.5V5.5L8 2Z" stroke="#1f2e3e" stroke-width="1.5"/>
+        <circle cx="8" cy="8" r="2" fill="#1f2e3e"/>
+      </svg>
+    </div>
+    <div>
+      <div class="hdr-name">SharePoint Sherpa</div>
+      <div class="hdr-scope">BWC · Customers</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <span class="vbadge">v4</span>
+    <button class="hdr-btn" id="sign-out-btn" style="display:none" onclick="doSignOut()">Sign out</button>
+  </div>
+</header>
+
+<div class="body">
+
+  <div id="auth-screen">
+    <div class="auth-card">
+      <h2>SharePoint Sherpa</h2>
+      <p>Sign in with your Bellweather Microsoft account to search, retrieve, and file documents.</p>
+      <button class="auth-go" onclick="doSignIn()">Sign in with Microsoft</button>
+    </div>
+  </div>
+
+  <div id="main-ui" style="display:none;flex:1;overflow:hidden;display:none">
+
+    <section class="search-panel">
+      <div class="panel-head">
+        <h2>Search &amp; Retrieve</h2>
+        <p>Find files across all projects and phases — date ranges work too</p>
+      </div>
+      <div class="search-row">
+        <input id="search-input" type="text" placeholder="e.g. Construction Agreements Jan 2024 – Mar 2026" onkeydown="if(event.key==='Enter')doSearch()"/>
+        <button class="search-btn" id="search-btn" onclick="doSearch()">Search</button>
+      </div>
+      <div class="filter-bar">
+        <div class="fg">
+          <div class="fgl">Phase</div>
+          <div class="chips" id="phase-chips">
+            <span class="chip on" data-val="">All</span>
+            <span class="chip" data-val="Leads">Leads</span>
+            <span class="chip" data-val="PreConstruction">Pre-con</span>
+            <span class="chip" data-val="Active-Design">Design</span>
+            <span class="chip" data-val="Signed">Signed</span>
+            <span class="chip" data-val="Completed">Completed</span>
+            <span class="chip" data-val="Delayed">Delayed</span>
+          </div>
+        </div>
+        <div class="fg">
+          <div class="fgl">Folder</div>
+          <div class="chips" id="folder-chips">
+            <span class="chip on" data-val="">All</span>
+            <span class="chip" data-val="1. Contracts">Contracts</span>
+            <span class="chip" data-val="2. Photos">Photos</span>
+            <span class="chip" data-val="3. Plans">Plans</span>
+            <span class="chip" data-val="4. Selection">Selections</span>
+            <span class="chip" data-val="5. Trade">Trade RFPs</span>
+            <span class="chip" data-val="6. Invoices">Invoices</span>
+            <span class="chip" data-val="7. Permits">Permits</span>
+            <span class="chip" data-val="8. Estimating">Estimating</span>
+          </div>
+        </div>
+        <div class="fg">
+          <div class="fgl">File type</div>
+          <div class="chips" id="type-chips">
+            <span class="chip on" data-val="">All</span>
+            <span class="chip" data-val="docx">.docx</span>
+            <span class="chip" data-val="pdf">.pdf</span>
+            <span class="chip" data-val="xlsx">.xlsx</span>
+            <span class="chip" data-val="pptx">.pptx</span>
+            <span class="chip" data-val="jpg,jpeg,png,heic">.jpg/png</span>
+          </div>
+        </div>
+        <div class="fg">
+          <div class="fgl">Year</div>
+          <div class="chips" id="year-chips">
+            <span class="chip on" data-val="">All</span>
+            <span class="chip" data-val="2022">2022</span>
+            <span class="chip" data-val="2023">2023</span>
+            <span class="chip" data-val="2024">2024</span>
+            <span class="chip" data-val="2025">2025</span>
+            <span class="chip" data-val="2026">2026</span>
+          </div>
+        </div>
+      </div>
+      <div class="sort-row" style="padding:5px 20px 7px;border-bottom:0.5px solid var(--border-soft);display:flex;align-items:center;gap:10px">
+        <span style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">Sort</span>
+        <div class="chips" id="sort-chips">
+          <span class="chip on" data-sort="newest">Newest</span>
+          <span class="chip" data-sort="oldest">Oldest</span>
+          <span class="chip" data-sort="az">Name A→Z</span>
+          <span class="chip" data-sort="za">Name Z→A</span>
+        </div>
+      </div>
+      <div class="results-hdr">
+        <span class="r-count" id="r-count">No search yet</span>
+        <button class="sel-all" onclick="toggleAll()">Select all</button>
+      </div>
+      <div class="results-list" id="results-list">
+        <div class="empty">
+          <svg width="38" height="38" viewBox="0 0 38 38" fill="none"><circle cx="16" cy="16" r="11" stroke="#a3a3a3" stroke-width="1.5"/><path d="M24 24L33 33" stroke="#a3a3a3" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <p>Search for files across all projects</p>
+          <small>Try a project name, document type, or date range</small>
+        </div>
+      </div>
+      <div class="results-footer">
+        <span class="scount" id="scount">0 selected</span>
+        <button id="dl-zip" onclick="downloadZip()" disabled>Download selected as ZIP</button>
+      </div>
+    </section>
+
+    <section class="file-panel">
+      <div class="panel-head" style="background:var(--bg)">
+        <h2>File &amp; Upload</h2>
+        <p>Route files to the right place</p>
+      </div>
+
+      <div class="drop-zone" id="dz"
+        ondragover="onDragOver(event,false)" ondragleave="onDragLeave(false)" ondrop="onDrop(event,false)"
+        onclick="document.getElementById('fp').click()">
+        <div class="dz-icon">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <path d="M7.5 2v8M4.5 6.5l3-4.5 3 4.5" stroke="#7a7a7a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 13h11" stroke="#7a7a7a" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3>Drop a single file</h3>
+        <p>Sherpa suggests the destination<br>based on the filename</p>
+      </div>
+
+      <div class="or-row"><div class="or-line"></div><span class="or-txt">or</span><div class="or-line"></div></div>
+
+      <div class="bulk-zone" id="bdz"
+        ondragover="onDragOver(event,true)" ondragleave="onDragLeave(true)" ondrop="onDrop(event,true)"
+        onclick="document.getElementById('bfp').click()">
+        <div class="dz-icon">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <rect x="2" y="3" width="9" height="2" rx="1" fill="#7a7a7a"/>
+            <rect x="2" y="6.5" width="9" height="2" rx="1" fill="#7a7a7a"/>
+            <rect x="2" y="10" width="5" height="2" rx="1" fill="#7a7a7a"/>
+            <circle cx="12" cy="11" r="2.5" stroke="#7a7a7a" stroke-width="1.2" fill="none"/>
+            <path d="M12 10v2M11 11h2" stroke="#7a7a7a" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3>Drop multiple files</h3>
+        <p>Review each proposed route<br>before confirming the batch</p>
+      </div>
+
+      <div class="divider"></div>
+
+      <div id="rb-placeholder" class="rb-placeholder">
+        <p>Drop a file above and Sherpa will suggest where to file it. You can adjust any part of the path before confirming.</p>
+      </div>
+
+      <div id="route-builder" class="route-builder" style="display:none">
+        <div class="rb-label">File destination</div>
+        <div class="pending-name" id="pending-name"></div>
+        <div class="rb-rows">
+          <div class="rb-row">
+            <label>Phase</label>
+            <select id="sel-phase" onchange="onPhaseChange()"><option value="">Loading…</option></select>
+          </div>
+          <div class="rb-row">
+            <label>Project</label>
+            <select id="sel-project" onchange="onProjectChange()"><option value="">Select phase first</option></select>
+          </div>
+          <div class="rb-row">
+            <label>Category folder</label>
+            <select id="sel-folder" onchange="onFolderChange()"><option value="">Select project first</option></select>
+          </div>
+          <div class="rb-row" id="subfolder-row" style="display:none">
+            <label>Subfolder</label>
+            <select id="sel-subfolder"><option value="">(none — file in folder root)</option></select>
+          </div>
+        </div>
+        <p class="rb-note">All dropdowns reflect the actual folders in SharePoint.</p>
+        <button class="confirm-btn" id="confirm-btn" onclick="confirmUpload()" disabled>File it here</button>
+      </div>
+
+      <input type="file" id="fp" style="display:none" onchange="handleFP(event)">
+      <input type="file" id="bfp" style="display:none" multiple onchange="handleBFP(event)">
+    </section>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const C = {
+  clientId: '84b37f0e-b149-4089-9bdc-fc654715db23',
+  tenantId: 'ff0e3f46-615a-4a22-8a80-4bb83d627785',
+  siteHost: 'bellweather.sharepoint.com',
+  sitePath: '/sites/BWC',
+  library:  'Customers',
+  graph:    'https://graph.microsoft.com/v1.0',
+  scopes:   ['Files.ReadWrite.All','Sites.ReadWrite.All'],
+};
+
+// ── MSAL ──────────────────────────────────────────────────────────────────────
+const msalApp = new msal.PublicClientApplication({
+  auth: {
+    clientId: C.clientId,
+    authority: `https://login.microsoftonline.com/${C.tenantId}`,
+    redirectUri: window.location.origin + window.location.pathname,
+  },
+  cache: { cacheLocation: 'sessionStorage' },
+});
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let driveId = null;
+let results  = [];
+let selected = new Set();
+let pendingFile  = null;
+let pendingQueue = [];
+let filters = { phase:'', folder:'', type:'', year:'' };
+let sortBy = 'newest';
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+(async () => {
+  try {
+    const r = await msalApp.handleRedirectPromise();
+    if (r) { await onAuth(); return; }
+    if (msalApp.getAllAccounts().length) { await onAuth(); return; }
+  } catch(e) { toast('Auth error: ' + e.message, 'err'); }
+})();
+
+function doSignIn() { msalApp.loginRedirect({ scopes: C.scopes }); }
+function doSignOut() { msalApp.logoutRedirect({ postLogoutRedirectUri: window.location.href }); }
+
+async function onAuth() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('main-ui').style.display = 'flex';
+  document.getElementById('sign-out-btn').style.display = 'block';
+  try {
+    await loadDrive();
+    await loadPhases();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ── GRAPH ─────────────────────────────────────────────────────────────────────
+async function token() {
+  const acct = msalApp.getAllAccounts()[0];
+  if (!acct) throw new Error('Not signed in');
+  try {
+    return (await msalApp.acquireTokenSilent({ scopes: C.scopes, account: acct })).accessToken;
+  } catch {
+    return (await msalApp.acquireTokenPopup({ scopes: C.scopes })).accessToken;
+  }
+}
+
+async function graph(url, opts = {}) {
+  const t = await token();
+  const ct = opts.raw ? {} : { 'Content-Type': 'application/json' };
+  const r = await fetch(url, {
+    ...opts,
+    headers: { Authorization: `Bearer ${t}`, ...ct, ...(opts.headers || {}) },
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error(e.error?.message || `HTTP ${r.status}`);
+  }
+  return opts.raw ? r : r.json();
+}
+
+async function loadDrive() {
+  const d = await graph(`${C.graph}/sites/${C.siteHost}:${C.sitePath}:/drives`);
+  const drive = d.value.find(x => x.name === C.library);
+  if (!drive) throw new Error(`Drive "${C.library}" not found`);
+  driveId = drive.id;
+}
+
+// ── SEARCH ────────────────────────────────────────────────────────────────────
+async function doSearch() {
+  if (!driveId) { toast('Not ready — try again', 'err'); return; }
+  const raw = document.getElementById('search-input').value.trim();
+  if (!raw) { toast('Enter a search term'); return; }
+
+  const btn = document.getElementById('search-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Searching…';
+  document.getElementById('r-count').textContent = 'Searching…';
+  document.getElementById('results-list').innerHTML = '';
+
+  try {
+    const { q, from, to } = parseDates(raw);
+    const searchQ = q || raw; // fallback to full query if no text left after date strip
+
+    // Use drive-scoped search — reliable, no path tricks needed
+    let url = `${C.graph}/drives/${driveId}/root/search(q='${encodeQ(searchQ)}')?$top=100&$select=id,name,parentReference,lastModifiedDateTime,file,webUrl`;
+    let all = [];
+    // Fetch all pages
+    while (url) {
+      const d = await graph(url);
+      all = all.concat(d.value || []);
+      url = d['@odata.nextLink'] || null;
+    }
+
+    // Files only
+    let hits = all.filter(i => i.file);
+
+    // Date filter
+    if (from) hits = hits.filter(i => new Date(i.lastModifiedDateTime) >= from);
+    if (to)   hits = hits.filter(i => new Date(i.lastModifiedDateTime) <= to);
+
+    // Client filters
+    if (filters.phase)  hits = hits.filter(i => pathOf(i).toLowerCase().includes(filters.phase.toLowerCase()));
+    if (filters.folder) hits = hits.filter(i => pathOf(i).includes(filters.folder));
+    if (filters.type) {
+      const exts = filters.type.split(',');
+      hits = hits.filter(i => exts.includes(extOf(i.name)));
+    }
+    if (filters.year) {
+      const yr = parseInt(filters.year);
+      hits = hits.filter(i => new Date(i.lastModifiedDateTime).getFullYear() === yr);
+    }
+
+    results  = hits.map(i => ({
+      id:       i.id,
+      driveId:  i.parentReference?.driveId || driveId,
+      name:     i.name,
+      path:     cleanPath(i.parentReference?.path || ''),
+      modified: i.lastModifiedDateTime,
+      ext:      extOf(i.name),
+    }));
+    selected.clear();
+    renderResults();
+  } catch(e) {
+    toast('Search failed: ' + e.message, 'err');
+    document.getElementById('r-count').textContent = 'Search failed';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Search';
+  }
+}
+
+function encodeQ(s) { return s.replace(/'/g,"''"); }
+
+function parseDates(input) {
+  const MO = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
+  const re = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*(\d{4})\b/gi;
+  const m = [...input.matchAll(re)];
+  let from = null, to = null;
+  if (m[0]) from = new Date(+m[0][2], MO[m[0][1].slice(0,3).toLowerCase()], 1);
+  if (m[1]) to   = new Date(+m[1][2], MO[m[1][1].slice(0,3).toLowerCase()] + 1, 0, 23, 59, 59);
+  const q = input.replace(re,'').replace(/[-–—]\s*/g,' ').replace(/\s+/g,' ').trim();
+  return { q, from, to };
+}
+
+function pathOf(i) { return i.parentReference?.path || ''; }
+function extOf(n)  { return (n.match(/\.([^.]+)$/) || ['',''])[1].toLowerCase(); }
+function cleanPath(raw) {
+  const idx = raw.indexOf('root:/');
+  let p = idx >= 0 ? raw.slice(idx + 6) : raw;
+  if (p.startsWith('Customers/')) p = p.slice(10);
+  return p.replace(/\//g, ' › ');
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), now = new Date();
+  return d.getFullYear() === now.getFullYear()
+    ? d.toLocaleDateString('en-US',{month:'short',day:'numeric'})
+    : d.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+}
+function dotCls(e) {
+  if (['docx','doc'].includes(e)) return 'd-docx';
+  if (e==='pdf') return 'd-pdf';
+  if (['xlsx','xls','csv'].includes(e)) return 'd-xlsx';
+  if (['pptx','ppt'].includes(e)) return 'd-pptx';
+  if (['jpg','jpeg','png','heic','webp'].includes(e)) return 'd-img';
+  return 'd-other';
+}
+
+// ── SORT ─────────────────────────────────────────────────────────────────────
+function sortResults(arr) {
+  const a = [...arr];
+  if (sortBy === 'newest') a.sort((x,y) => new Date(y.modified) - new Date(x.modified));
+  if (sortBy === 'oldest') a.sort((x,y) => new Date(x.modified) - new Date(y.modified));
+  if (sortBy === 'az')     a.sort((x,y) => x.name.localeCompare(y.name));
+  if (sortBy === 'za')     a.sort((x,y) => y.name.localeCompare(x.name));
+  return a;
+}
+
+// ── RENDER RESULTS ────────────────────────────────────────────────────────────
+function renderResults() {
+  const list = document.getElementById('results-list');
+  document.getElementById('r-count').textContent =
+    results.length ? `${results.length} result${results.length!==1?'s':''}` : 'No results';
+  if (!results.length) {
+    list.innerHTML = `<div class="empty">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><circle cx="15" cy="15" r="10" stroke="#a3a3a3" stroke-width="1.5"/><path d="M23 23L31 31" stroke="#a3a3a3" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <p>No results found</p><small>Try different terms or clear filters</small></div>`;
+    document.getElementById('dl-zip').disabled = true;
+    return;
+  }
+  results = sortResults(results);
+  list.innerHTML = results.map((r,i) => `
+    <div class="rrow${selected.has(r.id)?' sel':''}" id="rr${i}">
+      <div class="rcheck${selected.has(r.id)?' on':''}" onclick="toggleSel(${i})">
+        <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1.5 4l2 2 3-3" stroke="#d8b64f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="fdot ${dotCls(r.ext)}"></div>
+      <div class="rinfo" onclick="toggleSel(${i})">
+        <div class="rname">${esc(r.name)}</div>
+        <div class="rpath">${esc(r.path)}</div>
+      </div>
+      <div class="rdate">${fmtDate(r.modified)}</div>
+      <div class="rdl" id="dl${i}" onclick="dlOne(${i})" title="Download">↓</div>
+    </div>`).join('');
+  updateSelUI();
+}
+
+function toggleSel(i) {
+  const r = results[i];
+  if (selected.has(r.id)) selected.delete(r.id); else selected.add(r.id);
+  const row = document.getElementById(`rr${i}`);
+  const chk = row.querySelector('.rcheck');
+  row.classList.toggle('sel', selected.has(r.id));
+  chk.classList.toggle('on', selected.has(r.id));
+  updateSelUI();
+}
+function toggleAll() {
+  if (selected.size === results.length) selected.clear();
+  else results.forEach(r => selected.add(r.id));
+  renderResults();
+}
+function updateSelUI() {
+  const n = selected.size;
+  document.getElementById('scount').textContent = n ? `${n} selected` : '0 selected';
+  document.getElementById('dl-zip').disabled = n === 0;
+}
+
+// ── DOWNLOAD ──────────────────────────────────────────────────────────────────
+async function fetchBlob(r) {
+  const t = await token();
+  const res = await fetch(`${C.graph}/drives/${r.driveId}/items/${r.id}/content`,
+    { headers: { Authorization: `Bearer ${t}` } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.blob();
+}
+function dlTrigger(blob, name) {
+  const u = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href:u, download:name });
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(u), 5000);
+}
+async function dlOne(i) {
+  const r = results[i];
+  const btn = document.getElementById(`dl${i}`);
+  btn.textContent = '…';
+  try {
+    dlTrigger(await fetchBlob(r), r.name);
+    toast('Downloaded ' + r.name, 'ok');
+  } catch(e) { toast('Download failed: '+e.message,'err'); }
+  finally { btn.textContent = '↓'; }
+}
+async function downloadZip() {
+  const toGet = results.filter(r => selected.has(r.id));
+  if (!toGet.length) return;
+  const btn = document.getElementById('dl-zip');
+  btn.disabled = true;
+  try {
+    const zip = new JSZip();
+    for (let i=0;i<toGet.length;i++) {
+      btn.innerHTML = `<span class="spin"></span>${i+1}/${toGet.length}…`;
+      zip.file(toGet[i].name, await fetchBlob(toGet[i]));
+    }
+    dlTrigger(await zip.generateAsync({type:'blob'}), `sherpa-${Date.now()}.zip`);
+    toast(`${toGet.length} files downloaded as ZIP`, 'ok');
+  } catch(e) { toast('ZIP failed: '+e.message,'err'); }
+  finally { btn.disabled=false; btn.textContent='Download selected as ZIP'; updateSelUI(); }
+}
+
+// ── FILING PANEL ──────────────────────────────────────────────────────────────
+function onDragOver(e,bulk) { e.preventDefault(); document.getElementById(bulk?'bdz':'dz').classList.add('over'); }
+function onDragLeave(bulk)  { document.getElementById(bulk?'bdz':'dz').classList.remove('over'); }
+function onDrop(e,bulk)     { e.preventDefault(); onDragLeave(bulk); processFiles(Array.from(e.dataTransfer.files), bulk); }
+function handleFP(e)  { processFiles(Array.from(e.target.files), false); }
+function handleBFP(e) { processFiles(Array.from(e.target.files), true); }
+
+async function processFiles(files, bulk) {
+  if (!files.length) return;
+  if (bulk && files.length > 1) {
+    pendingQueue = [...files];
+    toast(`${files.length} files queued — filing one at a time`);
+  }
+  pendingFile = files[0];
+  await showRouteBuilder(pendingFile);
+}
+
+async function showRouteBuilder(file) {
+  document.getElementById('rb-placeholder').style.display = 'none';
+  document.getElementById('route-builder').style.display = 'block';
+  document.getElementById('pending-name').textContent = file.name;
+  document.getElementById('confirm-btn').disabled = true;
+
+  const projectName  = extractProject(file.name);
+  const suggestFld   = suggestFolder(file.name);
+  const suggestSub   = suggestSubfolder(file.name, suggestFld);
+
+  // Step 1: detect phase via search
+  let detectedPhase = null;
+  if (projectName && driveId) {
+    try { detectedPhase = await findPhase(projectName); } catch {}
+  }
+
+  // Step 2: set phase
+  if (detectedPhase) setSelectFuzzy('sel-phase', detectedPhase);
+
+  // Step 3: load + select projects
+  const phase = document.getElementById('sel-phase').value;
+  if (phase) {
+    await loadProjects(phase);
+    if (projectName) setSelectFuzzy('sel-project', projectName);
+  }
+
+  // Step 4: load + select folders
+  const project = document.getElementById('sel-project').value;
+  if (phase && project) {
+    await loadFolders(phase, project);
+    if (suggestFld) setSelectFuzzy('sel-folder', suggestFld);
+  }
+
+  // Step 5: load + select subfolders
+  const folder = document.getElementById('sel-folder').value;
+  if (phase && project && folder) {
+    await loadSubfolders(phase, project, folder);
+    if (suggestSub) setSelectFuzzy('sel-subfolder', suggestSub);
+    document.getElementById('confirm-btn').disabled = false;
+  }
+}
+
+// Load phase folders (called once on auth)
+async function loadPhases() {
+  if (!driveId) return;
+  const d = await graph(`${C.graph}/drives/${driveId}/root/children?$select=id,name,folder&$top=20`);
+  const phases = d.value.filter(i=>i.folder).map(i=>i.name).sort();
+  const sel = document.getElementById('sel-phase');
+  sel.innerHTML = '<option value="">— select phase —</option>' + phases.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+}
+
+async function loadProjects(phase) {
+  const psel = document.getElementById('sel-project');
+  psel.innerHTML = '<option value="">Loading…</option>';
+  document.getElementById('sel-folder').innerHTML = '<option value="">Select project first</option>';
+  document.getElementById('subfolder-row').style.display = 'none';
+  document.getElementById('confirm-btn').disabled = true;
+  if (!phase) { psel.innerHTML = '<option value="">— select phase first —</option>'; return; }
+  const d = await graph(`${C.graph}/drives/${driveId}/root:/${enc(phase)}:/children?$select=id,name,folder&$top=200`);
+  const projects = d.value.filter(i=>i.folder).map(i=>i.name).sort();
+  psel.innerHTML = '<option value="">— select project —</option>' + projects.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+}
+
+async function loadFolders(phase, project) {
+  const fsel = document.getElementById('sel-folder');
+  fsel.innerHTML = '<option value="">Loading…</option>';
+  document.getElementById('subfolder-row').style.display = 'none';
+  document.getElementById('confirm-btn').disabled = true;
+  if (!phase || !project) { fsel.innerHTML = '<option value="">Select project first</option>'; return; }
+  const path = enc(phase) + '/' + enc(project);
+  const d = await graph(`${C.graph}/drives/${driveId}/root:/${path}:/children?$select=id,name,folder&$top=20`);
+  const folders = d.value.filter(i=>i.folder).map(i=>i.name).sort();
+  fsel.innerHTML = '<option value="">— select folder —</option>' + folders.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join('');
+}
+
+async function loadSubfolders(phase, project, folder) {
+  const subRow = document.getElementById('subfolder-row');
+  const subSel = document.getElementById('sel-subfolder');
+  subRow.style.display = 'none';
+  if (!phase || !project || !folder) return;
+  try {
+    const path = enc(phase) + '/' + enc(project) + '/' + enc(folder);
+    const d = await graph(`${C.graph}/drives/${driveId}/root:/${path}:/children?$select=id,name,folder&$top=20`);
+    const subs = d.value.filter(i=>i.folder).map(i=>i.name).sort();
+    if (subs.length) {
+      subSel.innerHTML = '<option value="">(none — file in folder root)</option>' + subs.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+      subRow.style.display = 'flex';
+    }
+  } catch {}
+}
+
+// UI event handlers (manual changes by user)
+async function onPhaseChange() {
+  const phase = document.getElementById('sel-phase').value;
+  document.getElementById('confirm-btn').disabled = true;
+  await loadProjects(phase);
+}
+async function onProjectChange() {
+  const phase   = document.getElementById('sel-phase').value;
+  const project = document.getElementById('sel-project').value;
+  document.getElementById('confirm-btn').disabled = true;
+  if (phase && project) await loadFolders(phase, project);
+}
+async function onFolderChange() {
+  const phase   = document.getElementById('sel-phase').value;
+  const project = document.getElementById('sel-project').value;
+  const folder  = document.getElementById('sel-folder').value;
+  if (!folder) { document.getElementById('confirm-btn').disabled = true; return; }
+  document.getElementById('confirm-btn').disabled = false;
+  if (phase && project) await loadSubfolders(phase, project, folder);
+}
+
+async function findPhase(projectName) {
+  const d = await graph(`${C.graph}/drives/${driveId}/root/search(q='${encodeQ(projectName)}')?$top=10&$select=id,name,parentReference,folder`);
+  for (const i of (d.value||[])) {
+    if (i.folder && i.name === projectName) {
+      const path = i.parentReference?.path || '';
+      const m = path.match(/root:\/(.+?)\//);
+      if (m) return m[1];
+    }
+  }
+  return null;
+}
+
+function suggestSubfolder(name, folder) {
+  if (!folder) return null;
+  const l = name.toLowerCase();
+  if (folder.includes('Contracts')) {
+    if (l.includes('signed'))                          return '0. Signed';
+    if (/ da |design agreement|design agmt/.test(l))   return '1. DAs';
+    if (/dco|design change/.test(l))                   return '2. DCOs';
+    if (/construction agreement|construction agmt/.test(l)) return '3. Contract';
+    if (/weekly|fdda|idea /.test(l))                   return '4. Weekly';
+  }
+  if (folder.includes('Photos')) {
+    if (/existing|pre.demo|before/.test(l))  return '1. Existing';
+    if (/progress|demo|during/.test(l))      return '2. Progress';
+    if (/complet|final|after/.test(l))       return '3. Completion';
+  }
+  if (folder.includes('Plans')) {
+    if (/existing condition/.test(l))        return '1. Existing';
+    if (/initial|schematic/.test(l))         return '2. Initial';
+    if (/rendering|render/.test(l))          return '5. Rendering';
+  }
+  if (folder.includes('Permits')) {
+    if (/inspection/.test(l))  return '2. Inspection';
+    if (/fee|receipt/.test(l)) return '3. Permit Fee';
+    return '1. Permits';
+  }
+  return null;
+}
+
+function setSelectFuzzy(id, val) {
+  if (!val) return;
+  const sel = document.getElementById(id);
+  const vl  = val.toLowerCase();
+  // 1) exact, 2) starts-with, 3) option contains val keyword, 4) val contains option keyword
+  const opts = Array.from(sel.options);
+  let hit = opts.find(o => o.value === val)
+    || opts.find(o => o.value.toLowerCase().startsWith(vl))
+    || opts.find(o => o.value.toLowerCase().includes(vl))
+    || opts.find(o => vl.includes(o.value.toLowerCase().replace(/^\d+\.\s*/,'')));
+  if (hit) sel.value = hit.value;
+}
+
+async function confirmUpload() {
+  if (!pendingFile || !driveId) return;
+  const phase   = document.getElementById('sel-phase').value;
+  const project = document.getElementById('sel-project').value;
+  const folder  = document.getElementById('sel-folder').value;
+  const sub     = document.getElementById('sel-subfolder').value;
+  if (!phase || !project || !folder) { toast('Select phase, project, and folder','err'); return; }
+  const parts = [phase, project, folder, ...(sub ? [sub] : []), pendingFile.name];
+  const path  = parts.map(enc).join('/');
+
+  const btn = document.getElementById('confirm-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Filing…';
+  try {
+    const t = await token();
+    const res = await fetch(`${C.graph}/drives/${driveId}/root:/${path}:/content`, {
+      method: 'PUT',
+      headers: { Authorization:`Bearer ${t}`, 'Content-Type': pendingFile.type||'application/octet-stream' },
+      body: pendingFile,
+    });
+    if (!res.ok) { const e=await res.json().catch(()=>({})); throw new Error(e.error?.message||`HTTP ${res.status}`); }
+    toast('Filed: ' + pendingFile.name, 'ok');
+
+    // Next in queue?
+    pendingQueue = pendingQueue.slice(1);
+    if (pendingQueue.length) { pendingFile = pendingQueue[0]; showRouteBuilder(pendingFile); }
+    else {
+      pendingFile = null;
+      document.getElementById('route-builder').style.display = 'none';
+      document.getElementById('rb-placeholder').style.display = 'block';
+      document.getElementById('fp').value = '';
+      document.getElementById('bfp').value = '';
+    }
+  } catch(e) {
+    toast('Upload failed: ' + e.message, 'err');
+    btn.disabled = false;
+    btn.textContent = 'File it here';
+  }
+}
+
+// ── ROUTING HEURISTICS ────────────────────────────────────────────────────────
+function extractProject(name) {
+  const m = name.match(/^([A-Z][A-Z\-]+(?:[\s\-][A-Z]+)*)/);
+  return m ? m[1].trim() : null;
+}
+function suggestFolder(name) {
+  const l = name.toLowerCase();
+  if (l.includes('matterport'))            return '0. Matterport Files';
+  if (/agreement|contract|dco|signed/.test(l)) return '1. Contracts & Change Orders';
+  if (/\.jpe?g|\.png|\.heic|photo|img_/.test(l)) return '2. Photos';
+  if (/plan|elevation|drawing|rendering|structural/.test(l)) return '3. Plans, Engineering';
+  if (/selection|material rfp|fixture|tile/.test(l)) return '4. Selection Material RFPs';
+  if (/trade rfp|sub bid|subcontract/.test(l)) return '5. Trade Partner RFPs';
+  if (/invoice|inv-|receipt/.test(l))      return '6. Invoices';
+  if (/permit|inspection|zoning/.test(l))  return '7. Permits, Inspections, Fees';
+  if (/estimat|form comp|budget/.test(l))  return '8. Estimating';
+  return null;
+}
+
+// ── FILTER CHIPS ──────────────────────────────────────────────────────────────
+['phase-chips','folder-chips','type-chips','year-chips'].forEach(gid => {
+  const key = gid === 'phase-chips' ? 'phase' : gid === 'folder-chips' ? 'folder' : gid === 'type-chips' ? 'type' : 'year';
+  document.getElementById(gid).querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.getElementById(gid).querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+      chip.classList.add('on');
+      filters[key] = chip.dataset.val;
+    });
+  });
+});
+
+// Sort chips
+document.getElementById('sort-chips').querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.getElementById('sort-chips').querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    chip.classList.add('on');
+    sortBy = chip.dataset.sort;
+    if (results.length) renderResults();
+  });
+});
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function enc(s) { return encodeURIComponent(s); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+
+let _tt;
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type ? ' '+type : '');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => t.className = '', 3200);
+}
+</script>
+</body>
+</html>
