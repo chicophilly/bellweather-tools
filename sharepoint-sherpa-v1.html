@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SharePoint Sherpa · Bellweather</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy: #1f2e3e;
+  --gold: #d8b64f;
+  --gold-light: #f9e6ae;
+  --gold-pale: rgba(216,182,79,0.12);
+  --bg: #f5f3ee;
+  --surface: #ffffff;
+  --border: #e4dac4;
+  --border-soft: rgba(228,218,196,0.6);
+  --text: #1f2e3e;
+  --text-sec: #7a7a7a;
+  --text-muted: #a3a3a3;
+  --permit: #9b6127;
+  --permit-light: #fff0c7;
+  --success: #00521b;
+  --danger: #a30a0a;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ─────────────────────────────────────── */
+.app-header {
+  background: var(--navy);
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.header-brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark {
+  width: 30px; height: 30px; border-radius: 7px;
+  background: var(--gold); display: flex; align-items: center; justify-content: center;
+}
+.brand-mark svg { width: 16px; height: 16px; }
+.brand-name {
+  font-family: 'Fraunces', serif;
+  font-size: 17px; font-weight: 400;
+  color: #fff; letter-spacing: 0.01em;
+}
+.brand-scope { font-size: 11px; color: var(--gold); margin-top: 1px; }
+.header-auth { display: flex; align-items: center; gap: 10px; }
+#sign-in-btn, #sign-out-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 500;
+  padding: 6px 14px; border-radius: 20px; cursor: pointer;
+  border: 0.5px solid rgba(216,182,79,0.5);
+  background: rgba(216,182,79,0.1); color: var(--gold);
+  transition: background 0.15s;
+}
+#sign-in-btn:hover, #sign-out-btn:hover { background: rgba(216,182,79,0.2); }
+#sign-out-btn { display: none; }
+.version-badge { font-size: 10px; color: rgba(255,255,255,0.3); }
+
+/* ── LAYOUT ─────────────────────────────────────── */
+.app-body {
+  flex: 1; display: flex; overflow: hidden;
+}
+
+/* ── AUTH SCREEN ─────────────────────────────────── */
+#auth-screen {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+}
+.auth-card {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg); padding: 40px 48px;
+  text-align: center; max-width: 360px;
+}
+.auth-card h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 22px; font-weight: 400;
+  color: var(--navy); margin-bottom: 8px;
+}
+.auth-card p { font-size: 13px; color: var(--text-sec); margin-bottom: 24px; line-height: 1.6; }
+.auth-sign-in-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 500;
+  padding: 10px 28px; border-radius: 6px; cursor: pointer;
+  background: var(--navy); color: var(--gold);
+  border: none; width: 100%;
+}
+.auth-sign-in-btn:hover { background: #2a3e54; }
+
+/* ── MAIN UI ─────────────────────────────────────── */
+#main-ui { flex: 1; display: flex; overflow: hidden; display: none; }
+
+/* ── SEARCH PANEL ────────────────────────────────── */
+.search-panel {
+  flex: 1; display: flex; flex-direction: column;
+  background: var(--surface); overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+.panel-label {
+  padding: 10px 20px 8px;
+  border-bottom: 0.5px solid var(--border-soft);
+  background: var(--surface);
+}
+.panel-label h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 15px; font-weight: 400; color: var(--navy);
+}
+.panel-label p { font-size: 11px; color: var(--text-sec); margin-top: 1px; }
+
+.search-input-row {
+  padding: 12px 20px; display: flex; gap: 8px;
+  border-bottom: 0.5px solid var(--border-soft);
+}
+#search-input {
+  flex: 1; border: 0.5px solid var(--border);
+  border-radius: var(--radius); padding: 8px 12px;
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+  background: var(--bg); color: var(--text);
+  outline: none;
+}
+#search-input:focus { border-color: var(--gold); background: var(--surface); }
+#search-input::placeholder { color: var(--text-muted); }
+#search-btn {
+  font-family: 'DM Sans', sans-serif;
+  padding: 8px 16px; border-radius: var(--radius);
+  background: var(--navy); color: var(--gold);
+  border: none; font-size: 12px; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+}
+#search-btn:hover { background: #2a3e54; }
+#search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.filter-bar {
+  padding: 8px 20px 10px;
+  border-bottom: 0.5px solid var(--border-soft);
+  display: flex; flex-wrap: wrap; gap: 12px;
+  background: var(--surface);
+}
+.filter-group { display: flex; flex-direction: column; gap: 4px; }
+.filter-group-label {
+  font-size: 10px; font-weight: 500; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip {
+  font-size: 11px; padding: 3px 9px; border-radius: 20px;
+  border: 0.5px solid var(--border);
+  color: var(--text-sec); background: var(--bg);
+  cursor: pointer; transition: all 0.1s;
+  font-family: 'DM Sans', sans-serif;
+}
+.chip:hover { border-color: var(--gold); color: var(--text); }
+.chip.active {
+  background: var(--navy); color: var(--gold-light);
+  border-color: var(--navy);
+}
+
+.results-header {
+  padding: 8px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 0.5px solid var(--border-soft);
+}
+.results-count { font-size: 11px; color: var(--text-sec); }
+.select-all-btn {
+  font-size: 11px; padding: 3px 10px; border-radius: 20px;
+  background: var(--bg); border: 0.5px solid var(--border);
+  color: var(--text-sec); cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.select-all-btn:hover { border-color: var(--gold); }
+
+.results-list {
+  flex: 1; overflow-y: auto; padding: 10px 20px;
+}
+
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; height: 100%; gap: 8px;
+  color: var(--text-muted); text-align: center;
+}
+.empty-state svg { opacity: 0.3; }
+.empty-state p { font-size: 13px; }
+.empty-state small { font-size: 11px; }
+
+.result-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--radius);
+  border: 0.5px solid var(--border-soft);
+  margin-bottom: 5px; background: var(--surface);
+  transition: border-color 0.1s, background 0.1s;
+  cursor: default;
+}
+.result-item:hover { border-color: var(--border); }
+.result-item.selected {
+  border-color: var(--gold);
+  background: var(--gold-pale);
+}
+.result-check {
+  width: 15px; height: 15px; border-radius: 3px;
+  border: 0.5px solid var(--border); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.result-check.checked { background: var(--navy); border-color: var(--navy); }
+.result-check svg { display: none; }
+.result-check.checked svg { display: block; }
+.file-type-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.dot-docx { background: #2b6cb0; }
+.dot-pdf  { background: #c53030; }
+.dot-xlsx { background: #276749; }
+.dot-pptx { background: #c05621; }
+.dot-img  { background: #6b46c1; }
+.dot-other { background: var(--text-muted); }
+.result-info { flex: 1; min-width: 0; }
+.result-name {
+  font-size: 12px; font-weight: 500; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.result-path {
+  font-size: 10px; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.result-date { font-size: 10px; color: var(--text-muted); flex-shrink: 0; white-space: nowrap; }
+.result-dl {
+  flex-shrink: 0; width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; border: 0.5px solid var(--border);
+  color: var(--text-sec); cursor: pointer; font-size: 12px;
+  transition: all 0.1s;
+}
+.result-dl:hover { border-color: var(--gold); color: var(--navy); background: var(--gold-pale); }
+.result-dl.loading { opacity: 0.5; cursor: wait; }
+
+.results-footer {
+  padding: 10px 20px; border-top: 0.5px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface);
+}
+.selected-count { font-size: 11px; color: var(--text-sec); }
+#download-zip-btn {
+  font-family: 'DM Sans', sans-serif;
+  padding: 7px 16px; border-radius: var(--radius);
+  background: var(--gold); color: var(--navy);
+  border: none; font-size: 12px; font-weight: 500;
+  cursor: pointer;
+}
+#download-zip-btn:hover { background: #c9a840; }
+#download-zip-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── FILE PANEL ──────────────────────────────────── */
+.file-panel {
+  width: 290px; flex-shrink: 0; display: flex;
+  flex-direction: column; background: var(--bg);
+  overflow-y: auto;
+}
+
+.drop-zone {
+  margin: 14px; border: 1.5px dashed var(--border);
+  border-radius: var(--radius); padding: 22px 16px;
+  text-align: center; display: flex; flex-direction: column;
+  align-items: center; gap: 7px;
+  background: var(--surface);
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+.drop-zone.drag-over {
+  border-color: var(--gold); background: var(--gold-pale);
+}
+.drop-zone-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: var(--bg); border: 0.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+}
+.drop-zone h3 { font-size: 13px; font-weight: 500; color: var(--text); }
+.drop-zone p { font-size: 11px; color: var(--text-sec); line-height: 1.5; }
+.drop-or {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 14px 0;
+}
+.or-line { flex: 1; height: 0.5px; background: var(--border); }
+.or-text { font-size: 10px; color: var(--text-muted); }
+
+.bulk-drop-zone {
+  margin: 8px 14px 14px; border: 1.5px dashed var(--border);
+  border-radius: var(--radius); padding: 16px;
+  text-align: center; display: flex; flex-direction: column;
+  align-items: center; gap: 5px;
+  background: var(--surface); cursor: pointer;
+  transition: border-color 0.15s;
+}
+.bulk-drop-zone:hover { border-color: var(--gold); }
+.bulk-drop-zone h3 { font-size: 12px; font-weight: 500; color: var(--text); }
+.bulk-drop-zone p { font-size: 10px; color: var(--text-sec); line-height: 1.5; }
+
+.section-divider {
+  height: 0.5px; background: var(--border);
+  margin: 4px 0;
+}
+
+.route-preview {
+  margin: 12px 14px; background: var(--surface);
+  border: 0.5px solid var(--border); border-radius: var(--radius);
+  padding: 12px;
+}
+.route-preview-label {
+  font-size: 10px; font-weight: 500; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
+}
+.pending-file {
+  font-size: 11px; font-weight: 500; color: var(--text);
+  margin-bottom: 8px; word-break: break-word;
+}
+.route-crumb {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 3px;
+  margin-bottom: 10px;
+}
+.crumb-seg {
+  font-size: 10px; padding: 2px 7px; border-radius: 4px;
+  background: var(--bg); color: var(--text-sec);
+  border: 0.5px solid var(--border); cursor: pointer;
+}
+.crumb-seg:hover { border-color: var(--gold); color: var(--text); }
+.crumb-seg.highlight { background: var(--navy); color: var(--gold-light); border-color: var(--navy); }
+.crumb-arrow { font-size: 9px; color: var(--text-muted); }
+.route-note { font-size: 10px; color: var(--text-muted); line-height: 1.5; margin-bottom: 8px; }
+#confirm-file-btn {
+  font-family: 'DM Sans', sans-serif;
+  width: 100%; padding: 7px; border-radius: var(--radius);
+  background: var(--permit); color: var(--permit-light);
+  border: none; font-size: 12px; font-weight: 500; cursor: pointer;
+}
+#confirm-file-btn:hover { background: #7d4e1f; }
+#confirm-file-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.route-placeholder {
+  margin: 12px 14px; padding: 14px 12px;
+  background: var(--surface); border: 0.5px solid var(--border-soft);
+  border-radius: var(--radius); text-align: center;
+}
+.route-placeholder p { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
+
+/* ── STATUS TOAST ─────────────────────────────────── */
+#toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--navy); color: #fff;
+  padding: 8px 18px; border-radius: 20px;
+  font-size: 12px; pointer-events: none;
+  opacity: 0; transition: opacity 0.2s;
+  z-index: 1000;
+}
+#toast.show { opacity: 1; }
+#toast.error { background: var(--danger); }
+#toast.success { background: var(--success); }
+
+/* ── LOADING SPINNER ─────────────────────────────── */
+.spinner {
+  display: inline-block; width: 12px; height: 12px;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-top-color: #fff; border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle; margin-right: 5px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── SCROLLBAR ────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #737373; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M8 2L13 5.5V10.5L8 14L3 10.5V5.5L8 2Z" stroke="#1f2e3e" stroke-width="1.5" fill="none"/>
+        <circle cx="8" cy="8" r="2" fill="#1f2e3e"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">SharePoint Sherpa</div>
+      <div class="brand-scope">BWC · Customers</div>
+    </div>
+  </div>
+  <div class="header-auth">
+    <span class="version-badge">v1</span>
+    <button id="sign-in-btn" onclick="doSignIn()">Sign in</button>
+    <button id="sign-out-btn" onclick="doSignOut()">Sign out</button>
+  </div>
+</header>
+
+<div class="app-body">
+
+  <div id="auth-screen">
+    <div class="auth-card">
+      <h2>SharePoint Sherpa</h2>
+      <p>Sign in with your Bellweather Microsoft account to search and file documents across the BWC Customers library.</p>
+      <button class="auth-sign-in-btn" onclick="doSignIn()">Sign in with Microsoft</button>
+    </div>
+  </div>
+
+  <div id="main-ui">
+
+    <!-- SEARCH PANEL (left) -->
+    <section class="search-panel">
+      <div class="panel-label">
+        <h2>Search &amp; Retrieve</h2>
+        <p>Find files across all projects and phases</p>
+      </div>
+
+      <div class="search-input-row">
+        <input id="search-input" type="text"
+          placeholder="e.g. Construction Agreements Jan 2024 – Mar 2026"
+          onkeydown="if(event.key==='Enter') doSearch()"/>
+        <button id="search-btn" onclick="doSearch()">Search</button>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-group">
+          <div class="filter-group-label">Phase</div>
+          <div class="chips" id="phase-chips">
+            <span class="chip active" data-phase="">All</span>
+            <span class="chip" data-phase="Active - Leads">Leads</span>
+            <span class="chip" data-phase="Active - PreConstruction">Pre-con</span>
+            <span class="chip" data-phase="Active-Design">Design</span>
+            <span class="chip" data-phase="Active - Signed">Signed</span>
+            <span class="chip" data-phase="Completed">Completed</span>
+            <span class="chip" data-phase="Delayed">Delayed</span>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-label">Folder</div>
+          <div class="chips" id="folder-chips">
+            <span class="chip active" data-folder="">All</span>
+            <span class="chip" data-folder="1. Contracts">Contracts</span>
+            <span class="chip" data-folder="2. Photos">Photos</span>
+            <span class="chip" data-folder="3. Plans">Plans</span>
+            <span class="chip" data-folder="4. Selection">Selections</span>
+            <span class="chip" data-folder="5. Trade">Trade RFPs</span>
+            <span class="chip" data-folder="6. Invoices">Invoices</span>
+            <span class="chip" data-folder="7. Permits">Permits</span>
+            <span class="chip" data-folder="8. Estimating">Estimating</span>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-label">File type</div>
+          <div class="chips" id="type-chips">
+            <span class="chip active" data-ext="">All</span>
+            <span class="chip" data-ext="docx">.docx</span>
+            <span class="chip" data-ext="pdf">.pdf</span>
+            <span class="chip" data-ext="xlsx">.xlsx</span>
+            <span class="chip" data-ext="pptx">.pptx</span>
+            <span class="chip" data-ext="jpg png">.jpg/png</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="results-header">
+        <span class="results-count" id="results-count">No search yet</span>
+        <button class="select-all-btn" onclick="toggleSelectAll()">Select all</button>
+      </div>
+
+      <div class="results-list" id="results-list">
+        <div class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <circle cx="17" cy="17" r="11" stroke="#a3a3a3" stroke-width="1.5"/>
+            <path d="M26 26L34 34" stroke="#a3a3a3" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <p>Search for files across all projects</p>
+          <small>Use natural language or keywords — date ranges work too</small>
+        </div>
+      </div>
+
+      <div class="results-footer">
+        <span class="selected-count" id="selected-count">0 selected</span>
+        <button id="download-zip-btn" onclick="downloadSelectedAsZip()" disabled>
+          Download selected as ZIP
+        </button>
+      </div>
+    </section>
+
+    <!-- FILE PANEL (right) -->
+    <section class="file-panel">
+      <div class="panel-label" style="background: var(--bg);">
+        <h2>File &amp; Upload</h2>
+        <p>Route files to the right place</p>
+      </div>
+
+      <div class="drop-zone" id="drop-zone"
+        ondragover="handleDragOver(event)"
+        ondragleave="handleDragLeave(event)"
+        ondrop="handleDrop(event)"
+        onclick="triggerFilePicker()">
+        <div class="drop-zone-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 2v9M5 7l3-4 3 4" stroke="#7a7a7a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 13h12" stroke="#7a7a7a" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3>Drop a file here</h3>
+        <p>Sherpa reads the filename<br>and proposes the destination</p>
+      </div>
+
+      <div class="drop-or">
+        <div class="or-line"></div>
+        <span class="or-text">or</span>
+        <div class="or-line"></div>
+      </div>
+
+      <div class="bulk-drop-zone" id="bulk-drop-zone"
+        ondragover="handleDragOver(event, true)"
+        ondragleave="handleDragLeave(event, true)"
+        ondrop="handleBulkDrop(event)"
+        onclick="triggerBulkPicker()">
+        <div class="drop-zone-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="4" width="10" height="2" rx="1" fill="#7a7a7a"/>
+            <rect x="2" y="7" width="10" height="2" rx="1" fill="#7a7a7a"/>
+            <rect x="2" y="10" width="6" height="2" rx="1" fill="#7a7a7a"/>
+            <circle cx="12.5" cy="11.5" r="2.5" stroke="#7a7a7a" stroke-width="1.2" fill="none"/>
+            <path d="M12.5 10.5v2M11.5 11.5h2" stroke="#7a7a7a" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3>Drop multiple files</h3>
+        <p>Review each route<br>before confirming the batch</p>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <div id="route-area">
+        <div class="route-placeholder" id="route-placeholder">
+          <p>Drop a file above and Sherpa will propose a filing destination based on the filename.</p>
+        </div>
+        <div class="route-preview" id="route-preview" style="display:none">
+          <div class="route-preview-label">Proposed destination</div>
+          <div class="pending-file" id="pending-filename"></div>
+          <div class="route-crumb" id="route-crumb"></div>
+          <p class="route-note">Tap any segment to change it, then confirm.</p>
+          <button id="confirm-file-btn" onclick="confirmUpload()">File it here</button>
+        </div>
+      </div>
+
+      <input type="file" id="file-picker" style="display:none" onchange="handleFileInput(event)">
+      <input type="file" id="bulk-picker" style="display:none" multiple onchange="handleBulkInput(event)">
+    </section>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const C = {
+  clientId:  '84b37f0e-b149-4089-9bdc-fc654715db23',
+  tenantId:  'ff0e3f46-615a-4a22-8a80-4bb83d627785',
+  siteHost:  'bellweather.sharepoint.com',
+  sitePath:  '/sites/BWC',
+  library:   'Customers',
+  graph:     'https://graph.microsoft.com/v1.0',
+  scopes:    ['Files.ReadWrite.All', 'Sites.ReadWrite.All'],
+};
+
+// ── MSAL ────────────────────────────────────────────────────────────────────
+const msalConfig = {
+  auth: {
+    clientId: C.clientId,
+    authority: `https://login.microsoftonline.com/${C.tenantId}`,
+    redirectUri: window.location.origin + window.location.pathname,
+  },
+  cache: { cacheLocation: 'sessionStorage' },
+};
+const msalApp = new msal.PublicClientApplication(msalConfig);
+
+let driveId = null;
+let searchResults = [];
+let selectedIds  = new Set();
+let pendingFile  = null;
+let pendingRoute = null;
+let activeFilters = { phase: '', folder: '', ext: '' };
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+(async function init() {
+  try {
+    const resp = await msalApp.handleRedirectPromise();
+    if (resp) { onSignedIn(resp.account); return; }
+    const accounts = msalApp.getAllAccounts();
+    if (accounts.length) { onSignedIn(accounts[0]); return; }
+  } catch(e) { showToast('Auth error: ' + e.message, 'error'); }
+})();
+
+function doSignIn() {
+  msalApp.loginRedirect({ scopes: C.scopes });
+}
+function doSignOut() {
+  msalApp.logoutRedirect({ postLogoutRedirectUri: window.location.href });
+}
+
+async function onSignedIn(account) {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('main-ui').style.display = 'flex';
+  document.getElementById('sign-in-btn').style.display = 'none';
+  document.getElementById('sign-out-btn').style.display = 'block';
+  await loadDriveId();
+}
+
+// ── TOKEN ───────────────────────────────────────────────────────────────────
+async function getToken() {
+  const account = msalApp.getAllAccounts()[0];
+  if (!account) throw new Error('Not signed in');
+  try {
+    const r = await msalApp.acquireTokenSilent({ scopes: C.scopes, account });
+    return r.accessToken;
+  } catch {
+    const r = await msalApp.acquireTokenPopup({ scopes: C.scopes });
+    return r.accessToken;
+  }
+}
+
+async function callGraph(url, opts = {}) {
+  const token = await getToken();
+  const res = await fetch(url, {
+    ...opts,
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Graph error ${res.status}`);
+  }
+  return opts.raw ? res : res.json();
+}
+
+// ── DRIVE DISCOVERY ──────────────────────────────────────────────────────────
+async function loadDriveId() {
+  try {
+    const data = await callGraph(`${C.graph}/sites/${C.siteHost}:${C.sitePath}:/drives`);
+    const drive = data.value.find(d => d.name === C.library);
+    if (!drive) throw new Error(`"${C.library}" library not found`);
+    driveId = drive.id;
+  } catch(e) {
+    showToast('Could not load library: ' + e.message, 'error');
+  }
+}
+
+// ── SEARCH ───────────────────────────────────────────────────────────────────
+async function doSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  if (!q) { showToast('Enter a search term'); return; }
+  if (!driveId) { showToast('Library not loaded yet — try again', 'error'); return; }
+
+  const btn = document.getElementById('search-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Searching…';
+  document.getElementById('results-count').textContent = 'Searching…';
+  document.getElementById('results-list').innerHTML = '';
+
+  try {
+    // Build KQL — scope to Customers library via path restriction
+    const libraryPath = `https://${C.siteHost}${C.sitePath}/${C.library}`;
+    let kql = `${q} AND path:"${libraryPath}"`;
+    if (activeFilters.ext) {
+      const exts = activeFilters.ext.split(' ');
+      const extClause = exts.map(e => `FileExtension:${e}`).join(' OR ');
+      kql += ` AND (${extClause})`;
+    }
+
+    const body = {
+      requests: [{
+        entityTypes: ['driveItem'],
+        query: { queryString: kql },
+        from: 0, size: 50,
+        fields: ['id','name','webUrl','lastModifiedDateTime','parentReference','file','size'],
+      }]
+    };
+
+    const data = await callGraph(`${C.graph}/search/query`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+    let hits = data.value?.[0]?.hitsContainers?.[0]?.hits || [];
+
+    // Filter to files only
+    hits = hits.filter(h => h.resource.file);
+
+    // Client-side phase/folder filtering
+    if (activeFilters.phase) {
+      hits = hits.filter(h => {
+        const path = h.resource.parentReference?.path || '';
+        return path.toLowerCase().includes(activeFilters.phase.toLowerCase());
+      });
+    }
+    if (activeFilters.folder) {
+      hits = hits.filter(h => {
+        const path = h.resource.parentReference?.path || '';
+        return path.includes(activeFilters.folder);
+      });
+    }
+
+    searchResults = hits.map(h => ({
+      id:       h.resource.id,
+      driveId:  h.resource.parentReference?.driveId || driveId,
+      name:     h.resource.name,
+      path:     cleanPath(h.resource.parentReference?.path || ''),
+      modified: h.resource.lastModifiedDateTime,
+      ext:      extOf(h.resource.name),
+      webUrl:   h.resource.webUrl,
+    }));
+
+    selectedIds.clear();
+    renderResults();
+  } catch(e) {
+    showToast('Search failed: ' + e.message, 'error');
+    document.getElementById('results-count').textContent = 'Search failed';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Search';
+  }
+}
+
+function cleanPath(raw) {
+  // Raw: /drives/xxx/root:/Customers/2. Active-Design/CURRY - Basement/...
+  const idx = raw.indexOf('Customers/');
+  if (idx === -1) return raw;
+  return raw.substring(idx + 10); // after "Customers/"
+}
+
+function extOf(name) {
+  const m = name.match(/\.([^.]+)$/);
+  return m ? m[1].toLowerCase() : '';
+}
+
+function dotClass(ext) {
+  if (['docx','doc'].includes(ext)) return 'dot-docx';
+  if (ext === 'pdf') return 'dot-pdf';
+  if (['xlsx','xls','csv'].includes(ext)) return 'dot-xlsx';
+  if (['pptx','ppt'].includes(ext)) return 'dot-pptx';
+  if (['jpg','jpeg','png','heic','webp'].includes(ext)) return 'dot-img';
+  return 'dot-other';
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  if (d.getFullYear() === now.getFullYear()) {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
+function renderResults() {
+  const list = document.getElementById('results-list');
+  const count = document.getElementById('results-count');
+  const zip = document.getElementById('download-zip-btn');
+
+  count.textContent = `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''}`;
+
+  if (!searchResults.length) {
+    list.innerHTML = `<div class="empty-state">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <circle cx="15" cy="15" r="10" stroke="#a3a3a3" stroke-width="1.5"/>
+        <path d="M23 23L31 31" stroke="#a3a3a3" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M10 15h10M15 10v10" stroke="#a3a3a3" stroke-width="1" stroke-linecap="round"/>
+      </svg>
+      <p>No results found</p><small>Try different keywords or broaden the filters</small></div>`;
+    zip.disabled = true;
+    return;
+  }
+
+  list.innerHTML = searchResults.map((r, i) => `
+    <div class="result-item${selectedIds.has(r.id) ? ' selected' : ''}" id="row-${i}">
+      <div class="result-check${selectedIds.has(r.id) ? ' checked' : ''}" onclick="toggleSelect(${i})">
+        <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1.5 4l2 2 3-3" stroke="#d8b64f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="file-type-dot ${dotClass(r.ext)}"></div>
+      <div class="result-info" onclick="toggleSelect(${i})" style="cursor:pointer">
+        <div class="result-name">${escHtml(r.name)}</div>
+        <div class="result-path">${escHtml(r.path)}</div>
+      </div>
+      <div class="result-date">${fmtDate(r.modified)}</div>
+      <div class="result-dl" onclick="downloadSingle(${i})" title="Download">↓</div>
+    </div>`).join('');
+
+  updateSelectionUI();
+}
+
+function toggleSelect(i) {
+  const r = searchResults[i];
+  if (selectedIds.has(r.id)) selectedIds.delete(r.id);
+  else selectedIds.add(r.id);
+  const row = document.getElementById(`row-${i}`);
+  const chk = row.querySelector('.result-check');
+  row.classList.toggle('selected', selectedIds.has(r.id));
+  chk.classList.toggle('checked', selectedIds.has(r.id));
+  updateSelectionUI();
+}
+
+function toggleSelectAll() {
+  if (selectedIds.size === searchResults.length) {
+    selectedIds.clear();
+  } else {
+    searchResults.forEach(r => selectedIds.add(r.id));
+  }
+  renderResults();
+}
+
+function updateSelectionUI() {
+  const n = selectedIds.size;
+  document.getElementById('selected-count').textContent =
+    n === 0 ? '0 selected' : `${n} selected`;
+  document.getElementById('download-zip-btn').disabled = n === 0;
+}
+
+// ── DOWNLOAD ─────────────────────────────────────────────────────────────────
+async function fetchFileBlob(r) {
+  const token = await getToken();
+  const res = await fetch(`${C.graph}/drives/${r.driveId}/items/${r.id}/content`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+  return res.blob();
+}
+
+async function downloadSingle(i) {
+  const r = searchResults[i];
+  const btn = document.querySelector(`#row-${i} .result-dl`);
+  btn.classList.add('loading');
+  btn.textContent = '…';
+  try {
+    const blob = await fetchFileBlob(r);
+    triggerDownload(blob, r.name);
+    showToast(`Downloaded ${r.name}`, 'success');
+  } catch(e) {
+    showToast('Download failed: ' + e.message, 'error');
+  } finally {
+    btn.classList.remove('loading');
+    btn.textContent = '↓';
+  }
+}
+
+async function downloadSelectedAsZip() {
+  const toGet = searchResults.filter(r => selectedIds.has(r.id));
+  if (!toGet.length) return;
+
+  const btn = document.getElementById('download-zip-btn');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span>Building ZIP…`;
+
+  try {
+    const zip = new JSZip();
+    for (let i = 0; i < toGet.length; i++) {
+      const r = toGet[i];
+      btn.innerHTML = `<span class="spinner"></span>${i + 1}/${toGet.length}…`;
+      const blob = await fetchFileBlob(r);
+      zip.file(r.name, blob);
+    }
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    triggerDownload(zipBlob, `sherpa-${Date.now()}.zip`);
+    showToast(`Downloaded ${toGet.length} files as ZIP`, 'success');
+  } catch(e) {
+    showToast('ZIP failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Download selected as ZIP';
+    updateSelectionUI();
+  }
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+// ── ROUTING LOGIC ────────────────────────────────────────────────────────────
+const ROUTING = [
+  { folder: '0. Matterport Files',            kw: ['matterport'] },
+  { folder: '1. Contracts & Change Orders',   kw: ['agreement','contract','change order',' ca ',' da ','dco','signed contract'] },
+  { folder: '2. Photos',                      kw: ['photo','img_','dsc_','.jpg','.jpeg','.png','.heic'] },
+  { folder: '3. Plans, Engineering',          kw: ['plan','elevation','engineering','drawing','schedule','rendering','structural'] },
+  { folder: '4. Selection Material RFPs',     kw: ['selection','material rfp','product','spec','shower','tile','fixture'] },
+  { folder: '5. Trade Partner RFPs',          kw: ['trade rfp','subcontract','sub bid'] },
+  { folder: '6. Invoices',                    kw: ['invoice','inv-','receipt'] },
+  { folder: '7. Permits, Inspections, Fees',  kw: ['permit','inspection','zoning','variance','certificate of occupancy'] },
+  { folder: '8. Estimating',                  kw: ['estimate','estimating','form comp','budget','comp estimating'] },
+];
+
+const CONTRACT_SUB = [
+  { sub: '0. Signed Contract Documents', kw: ['signed'] },
+  { sub: '1. DAs',                        kw: [' da ','design agreement','design agmt'] },
+  { sub: '2. DCOs',                       kw: ['dco','design change order'] },
+  { sub: '3. Contract & COs',             kw: ['construction agreement','construction agmt',' ca ','change order'] },
+  { sub: '4. Weekly Customer Reports',    kw: ['weekly','idea ','fdda','customer report'] },
+];
+
+function routeFile(filename) {
+  const lower = filename.toLowerCase();
+
+  // Extract project name (ALL-CAPS at start)
+  const projectMatch = filename.match(/^([A-Z][A-Z\-]+(?:[\s\-][A-Z][A-Z\-]+)*)/);
+  const project = projectMatch ? projectMatch[1].trim() : null;
+
+  // Determine primary folder
+  let folder = null;
+  for (const rule of ROUTING) {
+    if (rule.kw.some(k => lower.includes(k))) { folder = rule.folder; break; }
+  }
+  if (!folder) folder = '1. Contracts & Change Orders'; // safe default
+
+  // Sub-folder routing for contracts
+  let sub = null;
+  if (folder === '1. Contracts & Change Orders') {
+    for (const rule of CONTRACT_SUB) {
+      if (rule.kw.some(k => lower.includes(k))) { sub = rule.sub; break; }
+    }
+  }
+
+  return { project, folder, sub };
+}
+
+async function findProjectPhase(projectName) {
+  if (!driveId || !projectName) return null;
+  try {
+    const libraryPath = `https://${C.siteHost}${C.sitePath}/${C.library}`;
+    const kql = `"${projectName}" AND IsFolder:true AND path:"${libraryPath}"`;
+    const body = {
+      requests: [{
+        entityTypes: ['driveItem'],
+        query: { queryString: kql },
+        fields: ['id','name','parentReference'],
+        from: 0, size: 5,
+      }]
+    };
+    const data = await callGraph(`${C.graph}/search/query`, { method: 'POST', body: JSON.stringify(body) });
+    const hits = data.value?.[0]?.hitsContainers?.[0]?.hits || [];
+    for (const h of hits) {
+      if (h.resource.name === projectName) {
+        const path = h.resource.parentReference?.path || '';
+        // Extract phase from path
+        const phases = ['Active - Leads','Active - PreConstruction','Active-Design','Active - Signed','Completed','Delayed or Rejected'];
+        for (const p of phases) {
+          if (path.includes(p)) return p;
+        }
+      }
+    }
+  } catch {}
+  return null;
+}
+
+// ── FILE DROP / UPLOAD ────────────────────────────────────────────────────────
+function handleDragOver(e, bulk) {
+  e.preventDefault();
+  (bulk ? document.getElementById('bulk-drop-zone') : document.getElementById('drop-zone'))
+    .classList.add('drag-over');
+}
+function handleDragLeave(e, bulk) {
+  (bulk ? document.getElementById('bulk-drop-zone') : document.getElementById('drop-zone'))
+    .classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+function handleBulkDrop(e) {
+  e.preventDefault();
+  document.getElementById('bulk-drop-zone').classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length) processBulkFiles(files);
+}
+
+function triggerFilePicker() { document.getElementById('file-picker').click(); }
+function triggerBulkPicker() { document.getElementById('bulk-picker').click(); }
+function handleFileInput(e) { if (e.target.files[0]) processFile(e.target.files[0]); }
+function handleBulkInput(e) {
+  const files = Array.from(e.target.files);
+  if (files.length) processBulkFiles(files);
+}
+
+async function processFile(file) {
+  pendingFile = file;
+  const route = routeFile(file.name);
+
+  // Try to find current phase from SharePoint
+  let phase = null;
+  if (route.project) {
+    showToast('Looking up project phase…');
+    phase = await findProjectPhase(route.project);
+  }
+
+  const segments = [
+    phase || '(phase)',
+    route.project || '(project)',
+    route.folder,
+    ...(route.sub ? [route.sub] : []),
+  ];
+
+  pendingRoute = { segments, phase, project: route.project, folder: route.folder, sub: route.sub };
+  renderRoutePreview(file.name, segments);
+}
+
+function renderRoutePreview(filename, segments) {
+  document.getElementById('route-placeholder').style.display = 'none';
+  document.getElementById('route-preview').style.display = 'block';
+  document.getElementById('pending-filename').textContent = filename;
+
+  const crumb = document.getElementById('route-crumb');
+  crumb.innerHTML = segments.map((s, i) => `
+    ${i > 0 ? '<span class="crumb-arrow">›</span>' : ''}
+    <span class="crumb-seg ${i >= segments.length - (pendingRoute.sub ? 2 : 1) ? 'highlight' : ''}"
+      onclick="editCrumb(${i})">${escHtml(s)}</span>
+  `).join('');
+}
+
+function editCrumb(i) {
+  const val = prompt('Edit this path segment:', pendingRoute.segments[i]);
+  if (val !== null) {
+    pendingRoute.segments[i] = val;
+    renderRoutePreview(pendingFile.name, pendingRoute.segments);
+  }
+}
+
+async function confirmUpload() {
+  if (!pendingFile || !pendingRoute || !driveId) return;
+
+  const btn = document.getElementById('confirm-file-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Filing…';
+
+  try {
+    const folderPath = pendingRoute.segments.join('/');
+    const token = await getToken();
+    const uploadUrl = `${C.graph}/drives/${driveId}/root:/${folderPath}/${pendingFile.name}:/content`;
+
+    const res = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': pendingFile.type || 'application/octet-stream',
+      },
+      body: pendingFile,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Upload error ${res.status}`);
+    }
+    showToast(`Filed: ${pendingFile.name}`, 'success');
+    pendingFile = null;
+    pendingRoute = null;
+    document.getElementById('route-preview').style.display = 'none';
+    document.getElementById('route-placeholder').style.display = 'block';
+    document.getElementById('file-picker').value = '';
+  } catch(e) {
+    showToast('Upload failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'File it here';
+  }
+}
+
+function processBulkFiles(files) {
+  // v1: queue first file, note batch coming
+  showToast(`${files.length} files queued — review one at a time`);
+  processFile(files[0]);
+  // TODO v2: full batch queue UI
+}
+
+// ── FILTER CHIPS ──────────────────────────────────────────────────────────────
+document.querySelectorAll('#phase-chips .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#phase-chips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeFilters.phase = chip.dataset.phase;
+  });
+});
+document.querySelectorAll('#folder-chips .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#folder-chips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeFilters.folder = chip.dataset.folder;
+  });
+});
+document.querySelectorAll('#type-chips .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#type-chips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeFilters.ext = chip.dataset.ext;
+  });
+});
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type ? ` ${type}` : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 3000);
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
