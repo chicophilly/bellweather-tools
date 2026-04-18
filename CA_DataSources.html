@@ -1,0 +1,1946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CA Tool — Sources</title>
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<script src="lib/sherpa-auth.js"></script>
+<script src="lib/sherpa-lookup.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   NEUTRAL INTERFACE STYLING — v2.6
+   Interface layer only. Design guide will merge in later.
+═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --bg:            #fafafa;
+  --surface:       #ffffff;
+  --border:        #e0e0e0;
+  --border-strong: #c8c8c8;
+  --text:          #1a1a1a;
+  --text-dim:      #666;
+  --text-mute:     #999;
+
+  --ok:            #2a7a4a;
+  --ok-bg:         #edf7f1;
+  --ok-border:     #b8dcc5;
+  --warn:          #9a6f1a;
+  --warn-bg:       #fbf4e4;
+  --warn-border:   #e4ceaa;
+  --info:          #2a4a7a;
+  --info-bg:       #edf1f7;
+  --info-border:   #b8c5dc;
+  --action:        #1a1a1a;
+  --action-hover:  #000000;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --r-sm: 4px; --r-md: 6px; --r-lg: 10px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 var(--s6);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-tool { font-size: 12px; color: var(--text-dim); }
+.topbar-tool strong { color: var(--text); font-weight: 600; }
+.topbar-version { font-size: 10px; color: var(--text-mute); margin-left: 6px; letter-spacing: 0.02em; }
+.spacer { flex: 1; }
+
+/* ── PROJECT SELECTOR ── */
+.topbar-project {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: 12px;
+}
+.topbar-project label { color: var(--text-dim); }
+.topbar-project select {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  max-width: 280px;
+}
+.topbar-project select:focus { outline: 1px solid var(--info); outline-offset: 1px; }
+.topbar-project .project-term {
+  font-size: 11px;
+  color: var(--text-mute);
+  font-style: italic;
+}
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.topbar-user button {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.topbar-user button:hover { border-color: var(--border-strong); color: var(--text); }
+
+/* ── AUTH OVERLAY ── */
+.auth-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(26, 26, 26, 0.55);
+  backdrop-filter: blur(3px);
+  z-index: 500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.auth-overlay.active { display: flex; }
+.auth-card {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  padding: 32px 36px;
+  max-width: 380px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.auth-card h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: var(--s2);
+  color: var(--text);
+}
+.auth-card p {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-bottom: var(--s5);
+}
+.auth-go {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 24px;
+  background: var(--action);
+  color: var(--surface);
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.auth-go:hover { background: var(--action-hover); }
+.auth-error {
+  margin-top: var(--s3);
+  font-size: 12px;
+  color: var(--warn);
+  display: none;
+}
+.auth-error.show { display: block; }
+
+/* ── PAGE ── */
+.page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: var(--s6) var(--s5) 90px;
+}
+.page-header { margin-bottom: var(--s5); }
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: var(--s2);
+}
+.page-desc {
+  font-size: 13px;
+  color: var(--text-dim);
+  max-width: 640px;
+  line-height: 1.6;
+}
+
+/* ── SHERPA HERO BAR (moved to top) ── */
+.sherpa-hero {
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  border-radius: var(--r-lg);
+  padding: var(--s4) var(--s5);
+  margin-bottom: var(--s5);
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+}
+.sherpa-hero-body { flex: 1; }
+.sherpa-hero-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--info);
+  margin-bottom: 3px;
+}
+.sherpa-hero-text {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.sherpa-hero-note {
+  font-size: 11px;
+  color: var(--text-mute);
+  font-style: italic;
+  margin-top: 4px;
+}
+.btn-sherpa-begin {
+  background: var(--info);
+  color: var(--surface);
+  border: none;
+  padding: 10px 22px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+.btn-sherpa-begin:hover { background: #1a3a5f; }
+.btn-sherpa-begin:disabled {
+  background: var(--border-strong);
+  cursor: not-allowed;
+}
+
+/* ── READINESS PANEL ── */
+.readiness {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--r-md);
+  padding: var(--s3) var(--s4);
+  margin-bottom: var(--s5);
+  display: flex;
+  gap: var(--s4);
+  align-items: flex-start;
+  transition: border-color 0.2s, background 0.2s;
+}
+.readiness.state-partial {
+  border-left-color: var(--warn);
+  background: var(--warn-bg);
+}
+.readiness.state-ready {
+  border-left-color: var(--ok);
+  background: var(--ok-bg);
+}
+.readiness-body { flex: 1; }
+.readiness-actions { flex-shrink: 0; }
+.readiness-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+  color: var(--text-dim);
+}
+.state-partial .readiness-label { color: var(--warn); }
+.state-ready .readiness-label { color: var(--ok); }
+.readiness-msg { font-size: 12px; color: var(--text); }
+.readiness-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: var(--s2); }
+.r-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+}
+.r-chip.ok {
+  background: var(--ok-bg);
+  color: var(--ok);
+  border-color: var(--ok-border);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COLLAPSIBLE SECTION
+═══════════════════════════════════════════════════════════════ */
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  margin-bottom: var(--s3);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.section[open] { border-color: var(--border-strong); }
+.section.has-content { border-left: 3px solid var(--ok); }
+
+.section-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: var(--s3) var(--s4);
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  user-select: none;
+  transition: background 0.12s;
+}
+.section-summary::-webkit-details-marker { display: none; }
+.section-summary:hover { background: var(--bg); }
+.section-summary:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: -2px;
+}
+
+.section-chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-mute);
+  transition: transform 0.15s;
+}
+.section[open] .section-chevron { transform: rotate(90deg); }
+.section-chevron svg { width: 100%; height: 100%; }
+
+.section-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.section-status {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 2px 9px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.section-status.ready {
+  color: var(--ok);
+  background: var(--ok-bg);
+  border-color: var(--ok-border);
+}
+.section-status.live {
+  color: var(--info);
+  background: var(--info-bg);
+  border-color: var(--info-border);
+}
+
+.section-body {
+  padding: 0 var(--s4) var(--s4) 40px;
+  border-top: 1px solid var(--border);
+  padding-top: var(--s4);
+}
+
+/* ── GROUP HEADER ── */
+.group-header {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: var(--s6) 0 var(--s3);
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+.group-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.group-header-note {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-mute);
+}
+
+/* ── SECTION INTERNAL LAYOUT ── */
+.src-meta {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: var(--s4);
+  margin-bottom: var(--s3);
+}
+.src-why {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.src-without {
+  font-size: 11px;
+  color: var(--warn);
+  margin-top: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: var(--warn-bg);
+  border-left: 2px solid var(--warn-border);
+  border-radius: var(--r-sm);
+  line-height: 1.5;
+}
+.has-content .src-without { display: none; }
+
+.src-instructions {
+  font-size: 11px;
+  color: var(--text-mute);
+  margin-top: var(--s2);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.src-instructions a {
+  color: var(--text);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+}
+.format-pill {
+  display: inline-block;
+  background: var(--bg);
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+/* ── SOURCE ACTION ROW (Sherpa + drop zone side by side) ── */
+.src-upload-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.btn-sherpa-find {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--info-border);
+  background: var(--info-bg);
+  color: var(--info);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.btn-sherpa-find:hover { background: #dde7f3; }
+.drop-zone {
+  position: relative;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  padding: var(--s3);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg);
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--action);
+  background: var(--surface);
+}
+.drop-zone input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.drop-zone-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+.drop-zone-label strong { color: var(--text); font-weight: 600; }
+.drop-zone-sublabel {
+  font-size: 10px;
+  color: var(--text-mute);
+  margin-top: 2px;
+}
+.drop-zone-formats {
+  font-size: 10px;
+  color: var(--text-mute);
+  margin-top: 3px;
+}
+
+/* ── FILE ROWS (with provenance) ── */
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin-top: var(--s3);
+}
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  background: var(--ok-bg);
+  border: 1px solid var(--ok-border);
+  border-radius: var(--r-md);
+}
+.file-row.manual {
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+.file-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.file-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-provenance {
+  font-size: 11px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.file-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  letter-spacing: 0.03em;
+}
+.file-source-badge.sherpa {
+  background: var(--info-bg);
+  color: var(--info);
+  border: 1px solid var(--info-border);
+}
+.file-source-badge.sherpa-ambiguous {
+  background: var(--warn-bg);
+  color: var(--warn);
+  border: 1px solid var(--warn-border);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.file-source-badge.sherpa-ambiguous:hover {
+  background: #f6ebd0;
+  border-color: #d6ba8b;
+}
+.file-source-badge.manual {
+  background: var(--bg);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.file-pending-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-mute);
+  border: 1px dashed var(--border-strong);
+  letter-spacing: 0.02em;
+}
+.candidates-panel {
+  margin-top: var(--s2);
+  padding: var(--s3);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+}
+.candidates-panel-title {
+  font-weight: 600;
+  color: var(--warn);
+  margin-bottom: var(--s2);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.candidate-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s2);
+  padding: var(--s2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.candidate-row:hover { border-color: var(--warn); }
+.candidate-row.current { border-color: var(--warn); background: #fff8ea; }
+.candidate-row:last-child { margin-bottom: 0; }
+.candidate-info { flex: 1; min-width: 0; }
+.candidate-name {
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.candidate-meta {
+  font-size: 11px;
+  color: var(--text-mute);
+  margin-top: 2px;
+}
+.candidate-score {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: ui-monospace, monospace;
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.file-source-link {
+  color: var(--info);
+  text-decoration: none;
+  font-size: 11px;
+  border-bottom: 1px solid var(--info-border);
+}
+.file-source-link:hover { border-bottom-color: var(--info); }
+.file-size {
+  font-size: 10px;
+  color: var(--text-mute);
+}
+.file-del {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-mute);
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+.file-del:hover {
+  color: var(--warn);
+  border-color: var(--warn-border);
+  background: var(--warn-bg);
+}
+.file-del svg { width: 14px; height: 14px; }
+
+/* ── COMP CAs ── */
+.comp-section {
+  margin-top: var(--s4);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--border);
+}
+.comp-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: var(--s2);
+}
+.comp-section-label-note {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-mute);
+}
+.comp-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: 6px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+}
+.comp-row.has-ca {
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
+}
+.comp-num {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-mute);
+  min-width: 20px;
+}
+.comp-name-field {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+}
+.comp-name-field::placeholder { color: var(--text-mute); }
+.comp-ca-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 8px;
+  white-space: nowrap;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+}
+.comp-ca-found {
+  background: var(--ok-bg);
+  color: var(--ok);
+  border-color: var(--ok-border);
+}
+.comp-actions { display: flex; align-items: center; gap: 4px; }
+.comp-add-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: inherit;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+.comp-add-btn:hover { background: var(--bg); color: var(--text); }
+.add-comp-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-mute);
+  padding: 4px 7px;
+  width: fit-content;
+  border-radius: var(--r-sm);
+}
+.add-comp-row:hover { background: var(--bg); color: var(--text); }
+.comp-parsing-note {
+  font-size: 11px;
+  color: var(--info);
+  font-style: italic;
+  margin-top: var(--s2);
+  padding: 5px 10px;
+  background: var(--info-bg);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--info-border);
+}
+
+/* ── CRIT NOTES TEXTAREA ── */
+.crit-textarea {
+  width: 100%;
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg);
+  resize: vertical;
+  min-height: 90px;
+  line-height: 1.55;
+  margin-top: var(--s2);
+}
+.crit-textarea:focus {
+  outline: none;
+  border-color: var(--action);
+  background: var(--surface);
+}
+
+/* ── NAV BAR ── */
+.nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: var(--s3) var(--s6);
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  z-index: 100;
+}
+.nav-left { flex: 1; display: flex; align-items: center; gap: var(--s2); }
+.nav-hint { font-size: 11px; color: var(--text-mute); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 16px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, border-color 0.12s;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+.btn-ghost:hover { background: var(--bg); color: var(--text); }
+.btn-primary {
+  background: var(--action);
+  color: var(--surface);
+  font-weight: 600;
+}
+.btn-primary:hover { background: var(--action-hover); }
+.btn-primary:disabled {
+  background: var(--border-strong);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ── TOGGLE ALL ── */
+.section-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--s2);
+}
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+}
+.link-btn:hover { color: var(--text); }
+
+/* ── STATIC SECTIONS ── */
+.static-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  margin-bottom: var(--s3);
+  padding: var(--s3) var(--s4);
+  display: flex;
+  gap: var(--s3);
+  align-items: flex-start;
+}
+.static-section.future { opacity: 0.6; }
+.static-section-body { flex: 1; }
+.static-section-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.static-section-desc { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+.static-section-meta { font-size: 11px; color: var(--text-mute); margin-top: 4px; }
+.static-section-status { flex-shrink: 0; }
+
+/* ── SHERPA PROGRESS INDICATOR ── */
+.sherpa-progress {
+  display: none;
+  padding: var(--s2) var(--s3);
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  border-radius: var(--r-sm);
+  font-size: 11px;
+  color: var(--info);
+  margin-top: var(--s2);
+}
+.sherpa-progress.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- AUTH OVERLAY -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-card">
+    <h2>Sign in to SharePoint</h2>
+    <p>Sign in with your Bellweather account to access project files and the CORE project list.</p>
+    <button class="auth-go" id="auth-btn" onclick="doSignIn()">Sign in</button>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-tool"><strong>CA Writing Tool</strong> &nbsp;/&nbsp; Sources<span class="topbar-version">v2.6</span></div>
+  <div class="topbar-project">
+    <label for="project-select">Project:</label>
+    <select id="project-select" onchange="selectProject(this.value)" disabled>
+      <option value="">— Sign in to load —</option>
+    </select>
+    <span class="project-term" id="project-term"></span>
+  </div>
+  <div class="spacer"></div>
+  <div class="topbar-user" id="topbar-user">
+    <span id="user-label"></span>
+    <button id="signout-btn" onclick="doSignOut()" style="display:none">Sign out</button>
+  </div>
+</header>
+
+<!-- PAGE -->
+<main class="page">
+
+  <div class="page-header">
+    <h1 class="page-title">Sources</h1>
+    <p class="page-desc">The baseline CA is generated from a set of source documents. Use Sherpa to automatically find and attach them from the project's SharePoint folder, or drag &amp; drop files manually into any section.</p>
+  </div>
+
+  <!-- ═════════ SHERPA HERO (moved to top, primary action) ═════════ -->
+  <div class="sherpa-hero">
+    <div class="sherpa-hero-body">
+      <div class="sherpa-hero-title">Find files with SharePoint Sherpa</div>
+      <div class="sherpa-hero-text">Sherpa will scan the project's SharePoint folder section by section, automatically attaching the right documents to each source below.</div>
+      <div class="sherpa-hero-note">Sherpa integration in progress — manual drag &amp; drop in each section also works.</div>
+      <div class="sherpa-progress" id="sherpa-progress"></div>
+    </div>
+    <button class="btn-sherpa-begin" id="btn-sherpa-begin" onclick="runSherpa()">Begin</button>
+  </div>
+
+  <!-- ═════════ READINESS PANEL ═════════ -->
+  <div class="readiness state-empty" id="readiness">
+    <div class="readiness-body">
+      <div class="readiness-label" id="readiness-label">Ready to upload</div>
+      <div class="readiness-msg" id="readiness-msg">
+        Click <strong>Begin</strong> above to have Sherpa find the required sources automatically, or upload the <strong>Scope Outline</strong> manually to begin.
+      </div>
+      <div class="readiness-chips" id="readiness-chips">
+        <span class="r-chip">○ Scope Outline</span>
+        <span class="r-chip">○ Design Agreement</span>
+        <span class="r-chip">○ Plan Notes</span>
+        <span class="r-chip">○ Selections</span>
+        <span class="r-chip">○ Estimate</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toggle all sections -->
+  <div class="section-controls">
+    <button class="link-btn" id="toggle-all" onclick="toggleAll()">Expand all</button>
+  </div>
+
+  <!-- ═════════ REQUIRED INPUTS ═════════ -->
+  <div class="group-header">
+    Required inputs
+    <span class="group-header-note">— the CA cannot generate without these</span>
+  </div>
+
+  <!-- SCOPE OUTLINE -->
+  <details class="section" id="card-scope" data-id="scope" open>
+    <summary class="section-summary">
+      <span class="section-chevron"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l4 4-4 4"/></svg></span>
+      <span class="section-title">Scope Outline</span>
+      <span class="section-status" id="badge-scope">Needed</span>
+    </summary>
+    <div class="section-body">
+      <div class="src-meta">
+        <div>
+          <div class="src-why">Primary translation source. The majority of CA scope content — functional areas, materials, specific work — is translated from the scope outline into the canonical trade-section structure.</div>
+          <div class="src-without">Without this: Sections 01–11 will be sparse or generic; most bullets will be placeholders.</div>
+          <div class="src-instructions">
+            <span class="format-pill">.docx</span><span class="format-pill">.pdf</span>
+            Prefer .docx when the final version is certain (structure preserves better for generation); otherwise use the signed PDF
+          </div>
+          <div class="file-list" id="fl-scope"></div>
+        </div>
+        <div class="src-upload-col">
+          <button class="btn-sherpa-find" onclick="findWithSherpa('scope')">Find with Sherpa ↗</button>
+          <div class="drop-zone" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event,'scope')" onclick="triggerUpload('scope')">
+            <input type="file" id="fu-scope" accept=".docx,.pdf" multiple onchange="handleFiles(this,'scope')">
+            <div class="drop-zone-label"><strong>Drag &amp; drop</strong></div>
+            <div class="drop-zone-sublabel">manual upload</div>
+            <div class="drop-zone-formats">.docx or .pdf</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- DESIGN AGREEMENT -->
+  <details class="section" id="card-da" data-id="da">
+    <summary class="section-summary">
+      <span class="section-chevron"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l4 4-4 4"/></svg></span>
+      <span class="section-title">Design Agreement</span>
+      <span class="section-status" id="badge-da">Needed</span>
+    </summary>
+    <div class="section-body">
+      <div class="src-meta">
+        <div>
+          <div class="src-why">Sets the client-facing scope commitments the CA must honor. Informs the cover page summary language, the framing of inclusions and exclusions, and the tone of Section 15 Additional Terms.</div>
+          <div class="src-without">Without this: Cover language will be generic. Exclusions and assumptions may not match what was promised in the DA.</div>
+          <div class="src-instructions">
+            <span class="format-pill">.docx</span><span class="format-pill">.pdf</span>
+            Prefer .docx when the final version is certain (structure preserves better for generation); otherwise use the signed PDF
+          </div>
+          <div class="file-list" id="fl-da"></div>
+        </div>
+        <div class="src-upload-col">
+          <button class="btn-sherpa-find" onclick="findWithSherpa('da')">Find with Sherpa ↗</button>
+          <div class="drop-zone" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event,'da')" onclick="triggerUpload('da')">
+            <input type="file" id="fu-da" accept=".docx,.pdf" multiple onchange="handleFiles(this,'da')">
+            <div class="drop-zone-label"><strong>Drag &amp; drop</strong></div>
+            <div class="drop-zone-sublabel">manual upload</div>
+            <div class="drop-zone-formats">.docx or .pdf</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- PLAN NOTES -->
+  <details class="section" id="card-plans" data-id="plans">
+    <summary class="section-summary">
+      <span class="section-chevron"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l4 4-4 4"/></svg></span>
+      <span class="section-title">Plan Notes</span>
+      <span class="section-status" id="badge-plans">Needed</span>
+    </summary>
+    <div class="section-body">
+      <div class="src-meta">
+        <div>
+          <div class="src-why">Project-specific facts that only live in the drawings: tile pattern and orientation, floating shelf locations, island configuration, backsplash boundaries, dormer details, structural specifics.</div>
+          <div class="src-without">Without this: Drawing-specific bullets will be missing or flagged as placeholders. Tile patterns, shelf and island details, and structural notes will not appear.</div>
+          <div class="src-instructions">
+            <span class="format-pill">.txt</span><span class="format-pill">.json</span>
+            Run drawings through the <a href="#" onclick="alert('Plan Note Extractor launches in new tab'); return false;">Plan Note Extractor ↗</a> first, then upload the export.
+          </div>
+          <div class="file-list" id="fl-plans"></div>
+        </div>
+        <div class="src-upload-col">
+          <button class="btn-sherpa-find" onclick="findWithSherpa('plans')">Find with Sherpa ↗</button>
+          <div class="drop-zone" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event,'plans')" onclick="triggerUpload('plans')">
+            <input type="file" id="fu-plans" accept=".txt,.json" multiple onchange="handleFiles(this,'plans')">
+            <div class="drop-zone-label"><strong>Drag &amp; drop</strong></div>
+            <div class="drop-zone-sublabel">manual upload</div>
+            <div class="drop-zone-formats">.txt or .json</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- SELECTIONS -->
+  <details class="section" id="card-sel" data-id="sel">
+    <summary class="section-summary">
+      <span class="section-chevron"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l4 4-4 4"/></svg></span>
+      <span class="section-title">BuilderTrend Selections</span>
+      <span class="section-status" id="badge-sel">Needed</span>
+    </summary>
+    <div class="section-body">
+      <div class="src-meta">
+        <div>
+          <div class="src-why">Distributes approved materials into the correct trade sections — cabinetry into Section 06, tile into 08.2, plumbing fixtures into 09, and so on. Also supplies dollar amounts and allowances for Section 13 Selections.</div>
+          <div class="src-without">Without this: Material names will be missing from trade sections. Section 13 will have no selections listed and no allowance amounts.</div>
+          <div class="src-instructions">
+            <span class="format-pill">.xlsx</span>
+            Not in SharePoint — export from BuilderTrend. Selections tab → export as .xlsx and drop here.
+          </div>
+          <div class="file-list" id="fl-sel"></div>
+        </div>
+        <div class="src-upload-col">
+          <div class="drop-zone" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event,'sel')" onclick="triggerUpload('sel')">
+            <input type="file" id="fu-sel" accept=".xlsx,.xls" multiple onchange="handleFiles(this,'sel')">
+            <div class="drop-zone-label"><strong>Drag &amp; drop</strong></div>
+            <div class="drop-zone-sublabel">BuilderTrend export</div>
+            <div class="drop-zone-formats">.xlsx</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ESTIMATE & COMPS (no separate group heading — lives inside Required) -->
+  <details class="section" id="card-estimate" data-id="estimate">
+    <summary class="section-summary">
+      <span class="section-chevron"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l4 4-4 4"/></svg></span>
+      <span class="section-title">Estimate &amp; Comp CAs</span>
+      <span class="section-status" id="badge-estimate">Needed</span>
+    </summary>
+    <div class="section-body">
+      <div class="src-meta">
+        <div>
+          <div class="src-why">The current project estimate — used to confirm contract value alignment and to identify which comp projects were used for pricing. Upload the Excel file and the comp project names will be read automatically.</div>
+          <div class="src-instructions">
+            <span class="format-pill">.xlsx</span>
+            Currently V4 Excel format — will eventually connect to the CORE Estimating Tool directly
+          </div>
+          <div class="file-list" id="fl-estimate"></div>
+        </div>
+        <div class="src-upload-col">
+          <button class="btn-sherpa-find" onclick="findWithSherpa('estimate')">Find with Sherpa ↗</button>
+          <div class="drop-zone" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event,'estimate')" onclick="triggerUpload('estimate')">
+            <input type="file" id="fu-estimate" accept=".xlsx,.xls" onchange="handleEstimate(this)">
+            <div class="drop-zone-label"><strong>Drag &amp; drop</strong></div>
+            <div class="drop-zone-sublabel">manual upload</div>
+            <div class="drop-zone-formats">.xlsx</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMP CAs SUB-SECTION -->
+      <div class="comp-section" id="comp-section">
+        <div class="comp-section-label">
+          Comp CAs used in this estimate
+          <span class="comp-section-label-note">— used for gap-filling and quality benchmarking</span>
+        </div>
+        <div id="comp-parsing-msg" class="comp-parsing-note" style="display:none;">
+          Comp project names read from estimate file — confirm below and retrieve each CA from SharePoint.
+        </div>
+        <div id="comp-rows"></div>
+        <div class="add-comp-row" onclick="addComp()">
+          + Add comp project
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ═════════ OPTIONAL INPUTS ═════════ -->
+  <div class="group-header">
+    Optional inputs
+    <span class="group-header-note">— adds detail for specific project types</span>
+  </div>
+
+  <!-- CRIT NOTES -->
+  <details class="section" id="card-crit" data-id="crit">
+    <summary class="section-summary">
+      <span class="section-chevron"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l4 4-4 4"/></svg></span>
+      <span class="section-title">Critique Meeting Notes</span>
+      <span class="section-status" id="badge-crit">Optional</span>
+    </summary>
+    <div class="section-body">
+      <div class="src-why">Key risks, red flags, constraints, and decisions from the team crit session. Applied against section generation — a range hood restriction resolves the HVAC flag; an appliance note triggers the right rough-in language.</div>
+      <div class="src-instructions">Add or supplement notes from the crit session not already captured in Project Setup.</div>
+      <textarea class="crit-textarea" id="crit-text"
+        placeholder="e.g. Range hood must be recirculating — building restricts exterior exhaust&#10;Owner-supplied appliances: collect full specs before framing&#10;Sink location to confirm on-site"
+        oninput="updateCrit()"></textarea>
+    </div>
+  </details>
+
+  <!-- ENGINEERING -->
+  <details class="section" id="card-eng" data-id="eng">
+    <summary class="section-summary">
+      <span class="section-chevron"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l4 4-4 4"/></svg></span>
+      <span class="section-title">Engineering / Structural Drawings</span>
+      <span class="section-status" id="badge-eng">Optional</span>
+    </summary>
+    <div class="section-body">
+      <div class="src-meta">
+        <div>
+          <div class="src-why">Beam specifications, structural details, and engineering notes on a separate structural set. Critical when Section 03 Masonry &amp; Structural or structural Rough Carpentry is in scope.</div>
+          <div class="src-without">If structural work is in scope: Sections 03 and 04 will rely on scope outline language only. Engineer-specific dimensions and beam specs will be missing.</div>
+          <div class="src-instructions">
+            <span class="format-pill">.txt</span><span class="format-pill">.json</span>
+            Run structural drawings through the <a href="#" onclick="alert('Plan Note Extractor'); return false;">Plan Note Extractor ↗</a> as a separate export.
+          </div>
+          <div class="file-list" id="fl-eng"></div>
+        </div>
+        <div class="src-upload-col">
+          <button class="btn-sherpa-find" onclick="findWithSherpa('eng')">Find with Sherpa ↗</button>
+          <div class="drop-zone" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event,'eng')" onclick="triggerUpload('eng')">
+            <input type="file" id="fu-eng" accept=".txt,.json" multiple onchange="handleFiles(this,'eng')">
+            <div class="drop-zone-label"><strong>Drag &amp; drop</strong></div>
+            <div class="drop-zone-sublabel">manual upload</div>
+            <div class="drop-zone-formats">.txt or .json</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- BUILDERTREND BID PACKAGES -->
+  <details class="section" id="card-bt" data-id="bt">
+    <summary class="section-summary">
+      <span class="section-chevron"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l4 4-4 4"/></svg></span>
+      <span class="section-title">BuilderTrend Bid Packages</span>
+      <span class="section-status" id="badge-bt">Optional</span>
+    </summary>
+    <div class="section-body">
+      <div class="src-meta">
+        <div>
+          <div class="src-why">Trade-organized scope language at the sub level — the highest-fidelity source for what each trade contractor is actually doing. Most useful when the scope outline is thin or the bid is already complete.</div>
+          <div class="src-without">On most standard projects this isn't needed — scope outline and plan notes cover the same ground. Useful for complex bids where scope is very detailed.</div>
+          <div class="src-instructions">
+            <span class="format-pill">.xlsx</span>
+            BuilderTrend → Bids tab → Export to Excel
+          </div>
+          <div class="file-list" id="fl-bt"></div>
+        </div>
+        <div class="src-upload-col">
+          <button class="btn-sherpa-find" onclick="findWithSherpa('bt')">Find with Sherpa ↗</button>
+          <div class="drop-zone" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event,'bt')" onclick="triggerUpload('bt')">
+            <input type="file" id="fu-bt" accept=".xlsx,.xls" multiple onchange="handleFiles(this,'bt')">
+            <div class="drop-zone-label"><strong>Drag &amp; drop</strong></div>
+            <div class="drop-zone-sublabel">manual upload</div>
+            <div class="drop-zone-formats">.xlsx</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- ═════════ ALWAYS ACTIVE ═════════ -->
+  <div class="group-header">
+    Always active
+    <span class="group-header-note">— no upload needed</span>
+  </div>
+
+  <div class="static-section">
+    <div class="static-section-body">
+      <div class="static-section-title">Standards library</div>
+      <div class="static-section-desc">Universal Bellweather language applied to every CA: pre-concealment inspection, floor photo documentation, smoke/CO compliance, third-party permits, installation heights, payment boilerplate, Section 15 Additional Terms standard text, and roof warranty when 05.2 Roofing is in scope.</div>
+      <div class="static-section-meta">Maintained internally. Applied automatically based on project type flags set in Setup.</div>
+    </div>
+    <div class="static-section-status"><span class="section-status live">Active</span></div>
+  </div>
+
+  <div class="static-section">
+    <div class="static-section-body">
+      <div class="static-section-title">Standard CA corpus</div>
+      <div class="static-section-desc">The three benchmark CAs — Wortman Kitchen, Curry Basement, Lebow 3rd Floor — used for gap-filling by project type and as the quality benchmark for polishing. The AI's goal is to produce output indistinguishable from one of these three.</div>
+      <div class="static-section-meta">3 documents · Updated when new standard CAs are designated by the team.</div>
+    </div>
+    <div class="static-section-status"><span class="section-status live">Connected</span></div>
+  </div>
+
+  <!-- ═════════ COMING SOON ═════════ -->
+  <div class="group-header">
+    Coming soon
+    <span class="group-header-note">— not yet connected</span>
+  </div>
+
+  <div class="static-section future">
+    <div class="static-section-body">
+      <div class="static-section-title">Project Board Trello card</div>
+      <div class="static-section-desc">Comment thread may contain scope decisions, client conversations, and team notes not captured in formal documents. Connected via Trello API + CORE_Projects.</div>
+    </div>
+    <div class="static-section-status"><span class="section-status">Not connected</span></div>
+  </div>
+
+  <div class="static-section future">
+    <div class="static-section-body">
+      <div class="static-section-title">Client conversations</div>
+      <div class="static-section-desc">AI-summarized transcripts of client calls, meetings, and walk-throughs, plus additional commentary from the sales team. Captures scope intent and decisions that aren't reflected in formal documents.</div>
+    </div>
+    <div class="static-section-status"><span class="section-status">Not connected</span></div>
+  </div>
+
+  <div class="static-section future">
+    <div class="static-section-body">
+      <div class="static-section-title">CORE Estimating Tool / Selections Tool</div>
+      <div class="static-section-desc">When these tools are live, the estimate and selections will flow directly from SharePoint — eliminating the file uploads in this screen entirely.</div>
+    </div>
+    <div class="static-section-status"><span class="section-status">Not connected</span></div>
+  </div>
+
+</main>
+
+<!-- NAV BAR -->
+<footer class="nav-bar">
+  <div class="nav-left">
+    <button class="btn btn-ghost" onclick="alert('← Back to Project Setup')">← Back</button>
+    <span class="nav-hint" id="nav-hint">Upload the required sources to continue.</span>
+  </div>
+  <button class="btn btn-primary" id="btn-generate" disabled onclick="alert('→ Proceeding to Generate')">
+    Generate Baseline CA →
+  </button>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// Each file object: { name, size, source: 'sherpa'|'manual', sourceUrl, folderUrl, ambiguous, candidates, pendingExtraction, fileObj }
+// ═══════════════════════════════════════════════════════════════
+const sources = {
+  scope:    { files: [], required: true,  label: 'Scope Outline' },
+  da:       { files: [], required: true,  label: 'Design Agreement' },
+  plans:    { files: [], required: true,  label: 'Plan Notes' },
+  sel:      { files: [], required: true,  label: 'Selections' },
+  estimate: { files: [], required: true,  label: 'Estimate' },
+  eng:      { files: [], required: false, label: 'Engineering' },
+  bt:       { files: [], required: false, label: 'BT Bids' },
+};
+
+// Slot ID → SherpaLookup source type.
+// Note: `sel` (Selections) is intentionally absent — BuilderTrend selections are
+// not in the SharePoint folder structure; they're exported from BT and dropped manually.
+const SOURCE_TYPE_MAP = {
+  scope:    'scope_outline',
+  da:       'design_agreement',
+  plans:    'plans',
+  estimate: 'estimate',
+};
+
+// CORE_Projects list on BWCore
+const PROJECTS_URL = 'https://graph.microsoft.com/v1.0/sites/bellweather.sharepoint.com:/sites/BWCore:/lists/CORE_Projects/items?$expand=fields&$select=id,fields&$top=500';
+
+let allProjects = [];
+let currentProject = null;
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════════
+(async () => {
+  try {
+    await SherpaAuth.init();
+    if (SherpaAuth.isSignedIn()) {
+      await onAuth();
+    } else {
+      showAuthOverlay();
+    }
+  } catch(e) {
+    console.error('Auth init failed:', e);
+    showAuthError('Auth init failed: ' + e.message);
+    showAuthOverlay();
+  }
+})();
+
+function doSignIn()  { SherpaAuth.signIn(); }
+function doSignOut() { SherpaAuth.signOut(); }
+
+async function onAuth() {
+  hideAuthOverlay();
+  const acct = SherpaAuth.getAccount();
+  document.getElementById('user-label').textContent = acct?.username || '';
+  document.getElementById('signout-btn').style.display = 'inline-block';
+  await loadProjects();
+}
+
+function showAuthOverlay() {
+  document.getElementById('auth-overlay').classList.add('active');
+}
+function hideAuthOverlay() {
+  document.getElementById('auth-overlay').classList.remove('active');
+}
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROJECTS — load CORE_Projects and render selector
+// ═══════════════════════════════════════════════════════════════
+async function loadProjects() {
+  const sel = document.getElementById('project-select');
+  sel.innerHTML = '<option value="">— Loading projects… —</option>';
+  sel.disabled = true;
+  try {
+    const data = await SherpaAuth.graph(PROJECTS_URL);
+    allProjects = (data.value || []).map(it => ({ _id: it.id, ...(it.fields || {}) }));
+    renderProjectSelector();
+    sel.disabled = false;
+  } catch(e) {
+    console.error('Load projects failed:', e);
+    sel.innerHTML = '<option value="">— Error loading projects —</option>';
+  }
+}
+
+function renderProjectSelector() {
+  const sel = document.getElementById('project-select');
+  // Sort by ClientName, blanks last
+  const sorted = [...allProjects].sort((a, b) => {
+    const an = (a.ClientName || '').toLowerCase();
+    const bn = (b.ClientName || '').toLowerCase();
+    if (!an && bn) return 1;
+    if (an && !bn) return -1;
+    return an.localeCompare(bn);
+  });
+  sel.innerHTML = '<option value="">— Choose a project —</option>' +
+    sorted.map(p => {
+      const parts = [p.ClientName || 'Untitled'];
+      if (p.JobCode) parts.push(p.JobCode);
+      if (p.PipelineStage) parts.push('(' + p.PipelineStage + ')');
+      return `<option value="${p._id}">${escapeHtml(parts.join(' · '))}</option>`;
+    }).join('');
+}
+
+function selectProject(id) {
+  currentProject = allProjects.find(p => p._id === id) || null;
+  const termEl = document.getElementById('project-term');
+  if (currentProject) {
+    const term = getProjectSearchTerm();
+    termEl.textContent = term ? '→ searches as "' + term + '"' : '(no search term available)';
+  } else {
+    termEl.textContent = '';
+  }
+  // Clear any Sherpa-sourced files from previous project
+  for (const id of Object.keys(sources)) {
+    sources[id].files = sources[id].files.filter(f => f.source === 'manual');
+    render(id);
+  }
+  updateReadiness();
+}
+
+// Derive a fuzzy-matchable project name for Sherpa. The SharePoint folder
+// convention is LASTNAME-first (e.g., "BLADES - Addition+"), so we take the
+// LAST whitespace-delimited token of ClientName. Examples:
+//   "Aaron & Margaret Blades" → "Blades"
+//   "The Wortman Family"      → "Wortman"
+//   "Lebow"                   → "Lebow"
+//   "Jim and Sue Blades"      → "Blades"
+// Falls back to JobCode prefix if ClientName is missing.
+function getProjectSearchTerm() {
+  if (!currentProject) return null;
+  const cn = (currentProject.ClientName || '').trim();
+  if (cn) {
+    let cleaned = cn
+      .replace(/^(the|mr\.?|mrs\.?|ms\.?|dr\.?)\s+/i, '')     // leading articles/titles
+      .replace(/\s+(family|household|residence|home)$/i, ''); // trailing descriptors
+    const tokens = cleaned.split(/\s+/).filter(t => t && t !== '&' && t.toLowerCase() !== 'and');
+    const token = tokens[tokens.length - 1];
+    if (token) return token;
+  }
+  const jc = (currentProject.JobCode || '').trim();
+  if (jc) return jc.split(/[-_\s]/)[0] || null;
+  return null;
+}
+
+// Simulated Sherpa results — replaced by real SherpaLookup.find() in v2.5.
+// Kept as empty stub for any dev-mode callers that reference it.
+const SHERPA_SIMULATED_RESULTS = {};
+
+// ═══════════════════════════════════════════════════════════════
+// MANUAL UPLOAD HANDLERS
+// ═══════════════════════════════════════════════════════════════
+function triggerUpload(id) {
+  const input = document.getElementById('fu-' + id);
+  if (input) input.click();
+}
+
+function handleFiles(input, id) {
+  Array.from(input.files).forEach(f => {
+    if (!sources[id].files.find(x => x.name === f.name)) {
+      sources[id].files.push({
+        name: f.name,
+        size: f.size,
+        source: 'manual',
+        sourceUrl: null,
+        fileObj: f
+      });
+    }
+  });
+  input.value = '';
+  render(id);
+  updateReadiness();
+}
+
+function dzOver(e)  { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function dzLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function dzDrop(e, id) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  Array.from(e.dataTransfer.files).forEach(f => {
+    if (!sources[id].files.find(x => x.name === f.name)) {
+      sources[id].files.push({
+        name: f.name,
+        size: f.size,
+        source: 'manual',
+        sourceUrl: null,
+        fileObj: f
+      });
+    }
+  });
+  render(id);
+  updateReadiness();
+}
+
+function removeFile(id, name) {
+  sources[id].files = sources[id].files.filter(f => f.name !== name);
+  render(id);
+  updateReadiness();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SHERPA — real lookup calls
+// ═══════════════════════════════════════════════════════════════
+function ensureProjectSelected() {
+  if (!currentProject) {
+    document.getElementById('sherpa-progress').classList.add('active');
+    document.getElementById('sherpa-progress').textContent = 'Select a project first.';
+    setTimeout(() => document.getElementById('sherpa-progress').classList.remove('active'), 3000);
+    return false;
+  }
+  const term = getProjectSearchTerm();
+  if (!term) {
+    document.getElementById('sherpa-progress').classList.add('active');
+    document.getElementById('sherpa-progress').textContent = 'No project search term available (missing ClientName and JobCode).';
+    setTimeout(() => document.getElementById('sherpa-progress').classList.remove('active'), 4000);
+    return false;
+  }
+  return true;
+}
+
+async function runSherpa() {
+  if (!ensureProjectSelected()) return;
+
+  const btn      = document.getElementById('btn-sherpa-begin');
+  const progress = document.getElementById('sherpa-progress');
+  btn.disabled = true;
+  btn.textContent = 'Scanning…';
+  progress.classList.add('active');
+
+  const term = getProjectSearchTerm();
+  const order = ['scope', 'da', 'plans', 'estimate'];
+  const summary = { confident: [], ambiguous: [], none: [], error: [] };
+
+  for (const id of order) {
+    // Skip if a Sherpa-sourced file already exists for this slot
+    if (sources[id].files.some(f => f.source === 'sherpa')) continue;
+
+    progress.textContent = 'Searching for ' + sources[id].label + '…';
+    try {
+      const result = await SherpaLookup.find(term, SOURCE_TYPE_MAP[id]);
+      applyLookupResult(id, result);
+      summary[result.status].push(sources[id].label);
+    } catch(e) {
+      console.error('Sherpa error for', id, e);
+      summary.error.push(sources[id].label + ' (' + e.message + ')');
+    }
+  }
+
+  // Build summary line
+  const parts = [];
+  if (summary.confident.length) parts.push(summary.confident.length + ' found');
+  if (summary.ambiguous.length) parts.push(summary.ambiguous.length + ' ambiguous — review');
+  if (summary.none.length)      parts.push('not found: ' + summary.none.join(', '));
+  if (summary.error.length)     parts.push('errors: ' + summary.error.join(', '));
+  progress.textContent = 'Sherpa complete — ' + (parts.length ? parts.join('; ') : 'no action taken') + '.';
+
+  btn.disabled = false;
+  btn.textContent = 'Run again';
+  setTimeout(() => progress.classList.remove('active'), 10000);
+}
+
+async function findWithSherpa(id) {
+  if (!ensureProjectSelected()) return;
+  if (!SOURCE_TYPE_MAP[id]) {
+    // eng/bt are not wired to Sherpa — shouldn't happen via the UI, but guard anyway
+    return;
+  }
+
+  const progress = document.getElementById('sherpa-progress');
+  progress.classList.add('active');
+  progress.textContent = 'Searching for ' + sources[id].label + '…';
+
+  try {
+    const result = await SherpaLookup.find(getProjectSearchTerm(), SOURCE_TYPE_MAP[id]);
+    // Replace any existing Sherpa-sourced entries; keep manual ones
+    sources[id].files = sources[id].files.filter(f => f.source === 'manual');
+    applyLookupResult(id, result);
+
+    if (result.status === 'confident') {
+      progress.textContent = 'Found ' + result.file.name;
+    } else if (result.status === 'ambiguous') {
+      progress.textContent = 'Ambiguous — top match attached, click the badge to review ' + (result.candidates?.length || 0) + ' candidates.';
+    } else {
+      progress.textContent = 'Sherpa did not find a ' + sources[id].label + '. Use manual upload.';
+    }
+  } catch(e) {
+    console.error('Sherpa error:', e);
+    progress.textContent = 'Sherpa error: ' + e.message;
+  }
+
+  setTimeout(() => progress.classList.remove('active'), 6000);
+}
+
+function applyLookupResult(id, result) {
+  if (result.status === 'none') return;
+  const file = result.file;
+  if (!file) return;
+
+  sources[id].files.push({
+    name: file.name,
+    size: file.size || 0,
+    source: 'sherpa',
+    sourceUrl: file.webUrl || null,
+    folderUrl: file.folderUrl || null,
+    ambiguous: result.status === 'ambiguous',
+    candidates: result.candidates || [],
+    pendingExtraction: id === 'plans',
+    fileObj: null,
+  });
+  render(id);
+  updateReadiness();
+}
+
+// Swap the currently-attached Sherpa file for a different candidate
+function pickCandidate(id, candidateIdx) {
+  const src = sources[id];
+  const current = src.files.find(f => f.source === 'sherpa');
+  if (!current || !current.candidates) return;
+  const pick = current.candidates[candidateIdx];
+  if (!pick) return;
+
+  // Move the picked candidate into the "file" position and rotate the others
+  const newCandidates = current.candidates.slice();
+  newCandidates.splice(candidateIdx, 1);
+  // The file we're replacing becomes a candidate (at its original score position)
+  const demoted = {
+    name: current.name,
+    size: current.size,
+    webUrl: current.sourceUrl,
+    folderUrl: current.folderUrl,
+    score: current.score || 0,
+  };
+  newCandidates.push(demoted);
+
+  src.files = src.files.filter(f => f !== current);
+  src.files.push({
+    name: pick.name,
+    size: pick.size || 0,
+    source: 'sherpa',
+    sourceUrl: pick.webUrl || null,
+    folderUrl: pick.folderUrl || null,
+    ambiguous: true,   // still ambiguous — user picked, but the situation was ambiguous
+    candidates: newCandidates,
+    pendingExtraction: id === 'plans',
+    fileObj: null,
+  });
+  render(id);
+  updateReadiness();
+}
+
+function toggleCandidates(id) {
+  const panel = document.getElementById('cand-' + id);
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════
+function render(id) {
+  const src   = sources[id];
+  const card  = document.getElementById('card-' + id);
+  const list  = document.getElementById('fl-' + id);
+  const badge = document.getElementById('badge-' + id);
+  if (!card || !badge) return;
+
+  if (src.files.length) {
+    card.classList.add('has-content');
+    badge.textContent = 'Ready';
+    badge.className = 'section-status ready';
+    if (list) list.innerHTML = src.files.map(f => renderFileRow(id, f)).join('');
+  } else {
+    card.classList.remove('has-content');
+    if (list) list.innerHTML = '';
+    badge.textContent = src.required ? 'Needed' : 'Optional';
+    badge.className = 'section-status';
+  }
+}
+
+function renderFileRow(id, f) {
+  let sourceBadge;
+  if (f.source === 'manual') {
+    sourceBadge = '<span class="file-source-badge manual">Manual</span>';
+  } else if (f.ambiguous) {
+    sourceBadge = `<span class="file-source-badge sherpa-ambiguous" onclick="toggleCandidates('${id}')" title="Ambiguous match — click to review candidates">Sherpa ? (${(f.candidates || []).length + 1})</span>`;
+  } else {
+    sourceBadge = '<span class="file-source-badge sherpa">Sherpa</span>';
+  }
+
+  const sourceLink = f.source === 'sherpa' && (f.folderUrl || f.sourceUrl)
+    ? ` · <a class="file-source-link" href="${escapeAttr(f.folderUrl || f.sourceUrl)}" target="_blank" rel="noopener">${f.folderUrl ? 'Open folder ↗' : 'View in SharePoint ↗'}</a>`
+    : '';
+
+  const pendingChip = f.pendingExtraction
+    ? ' <span class="file-pending-chip" title="Raw plans attached — the Plan Note Extractor has not been run yet">extraction pending</span>'
+    : '';
+
+  const safeName = escapeHtml(f.name);
+  const safeNameAttr = escapeAttr(f.name);
+
+  // Candidate picker panel (only rendered when ambiguous)
+  let candidatesPanel = '';
+  if (f.ambiguous && f.candidates && f.candidates.length) {
+    const rows = f.candidates.map((c, i) => `
+      <div class="candidate-row" onclick="pickCandidate('${id}', ${i})">
+        <div class="candidate-info">
+          <div class="candidate-name" title="${escapeAttr(c.name)}">${escapeHtml(c.name)}</div>
+          <div class="candidate-meta">${escapeHtml(c.parentName || c.path || '')}${c.modified ? ' · ' + new Date(c.modified).toLocaleDateString() : ''}</div>
+        </div>
+        <span class="candidate-score">score ${c.score ?? '—'}</span>
+      </div>
+    `).join('');
+    candidatesPanel = `
+      <div class="candidates-panel" id="cand-${id}" style="display:none">
+        <div class="candidates-panel-title">Other candidates — click to swap</div>
+        ${rows}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="file-row ${f.source === 'manual' ? 'manual' : ''}">
+      <div class="file-info">
+        <div class="file-name" title="${safeNameAttr}">${safeName}</div>
+        <div class="file-provenance">
+          ${sourceBadge}${sourceLink}
+          <span class="file-size">· ${fmtBytes(f.size)}</span>${pendingChip}
+        </div>
+      </div>
+      <button class="file-del" title="Remove file" onclick="removeFile('${id}', '${safeNameAttr.replace(/'/g, "\\'")}')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 5h8M5 5V3.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V5M5.5 8v2M8.5 8v2M4 5l.5 6a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1L10 5"/>
+        </svg>
+      </button>
+    </div>
+    ${candidatesPanel}
+  `;
+}
+
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(0) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escapeAttr(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ESTIMATE & COMPS
+// ═══════════════════════════════════════════════════════════════
+const compProjects = [
+  { name: '', caFile: null },
+  { name: '', caFile: null },
+  { name: '', caFile: null },
+];
+
+function handleEstimate(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  input.value = '';
+  const f = files[0];
+  sources.estimate.files = [{
+    name: f.name,
+    size: f.size,
+    source: 'manual',
+    sourceUrl: null,
+    fileObj: f
+  }];
+  render('estimate');
+  updateReadiness();
+
+  setTimeout(() => {
+    document.getElementById('comp-parsing-msg').style.display = 'block';
+    compProjects[0].name = 'Curry Basement';
+    compProjects[1].name = 'Mercurio Kitchen';
+    compProjects[2].name = '';
+    renderComps();
+  }, 700);
+}
+
+function renderComps() {
+  const container = document.getElementById('comp-rows');
+  container.innerHTML = compProjects.map((c, i) => `
+    <div class="comp-row ${c.caFile ? 'has-ca' : ''}" id="comp-row-${i}">
+      <span class="comp-num">${i + 1}.</span>
+      <input class="comp-name-field" id="comp-name-${i}"
+        value="${escapeAttr(c.name)}"
+        placeholder="Project name (e.g. Curry Basement)"
+        oninput="compProjects[${i}].name = this.value">
+      <div class="comp-actions">
+        ${c.caFile
+          ? `<span class="comp-ca-status comp-ca-found">CA ready</span>
+             <button class="comp-add-btn" onclick="removeCompCA(${i})">Remove</button>`
+          : `<span class="comp-ca-status">CA needed</span>
+             <button class="comp-add-btn" onclick="openSherpaForComp(${i})">Find with Sherpa ↗</button>
+             <button class="comp-add-btn" onclick="uploadCompCA(${i})">Upload</button>
+             <input type="file" id="comp-fu-${i}" accept=".docx,.pdf" style="display:none" onchange="handleCompCA(this, ${i})">`
+        }
+        <button class="comp-add-btn" onclick="removeComp(${i})">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addComp() { compProjects.push({ name: '', caFile: null }); renderComps(); }
+function removeComp(i) { compProjects.splice(i, 1); renderComps(); }
+function uploadCompCA(i) { document.getElementById('comp-fu-' + i).click(); }
+function handleCompCA(input, i) {
+  if (!input.files.length) return;
+  compProjects[i].caFile = input.files[0];
+  input.value = '';
+  renderComps();
+}
+function removeCompCA(i) { compProjects[i].caFile = null; renderComps(); }
+function openSherpaForComp(i) {
+  alert('Sherpa would now search for the CA for "' + (compProjects[i].name || 'comp project ' + (i+1)) + '"');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// READINESS PANEL
+// ═══════════════════════════════════════════════════════════════
+function updateReadiness() {
+  const has = id => sources[id].files.length > 0;
+  const panel = document.getElementById('readiness');
+  const label = document.getElementById('readiness-label');
+  const msg   = document.getElementById('readiness-msg');
+  const chips = document.getElementById('readiness-chips');
+  const btn   = document.getElementById('btn-generate');
+  const hint  = document.getElementById('nav-hint');
+
+  const reqIds = ['scope', 'da', 'plans', 'sel', 'estimate'];
+  const ready   = reqIds.filter(has);
+  const missing = reqIds.filter(id => !has(id));
+  const allDone = missing.length === 0;
+
+  const chipLabels = {
+    scope: 'Scope Outline',
+    da: 'Design Agreement',
+    plans: 'Plan Notes',
+    sel: 'Selections',
+    estimate: 'Estimate'
+  };
+
+  chips.innerHTML = reqIds.map(id =>
+    `<span class="r-chip ${has(id) ? 'ok' : ''}">${has(id) ? '✓' : '○'} ${chipLabels[id]}</span>`
+  ).join('');
+
+  if (allDone) {
+    panel.className = 'readiness state-ready';
+    label.textContent = 'Ready to generate';
+    msg.innerHTML = 'All required sources attached. The baseline CA will be generated with full scope content, material names, allowance amounts, and drawing-specific details distributed into the correct trade sections.';
+    btn.disabled = false;
+    hint.textContent = 'All required sources attached.';
+    return;
+  }
+
+  if (ready.length === 0) {
+    panel.className = 'readiness state-empty';
+    label.textContent = 'Ready to upload';
+    msg.innerHTML = 'Click <strong>Begin</strong> above to have Sherpa find the required sources automatically, or upload the <strong>Scope Outline</strong> manually to begin.';
+    btn.disabled = true;
+    hint.textContent = 'Attach the required sources to continue.';
+    return;
+  }
+
+  panel.className = 'readiness state-partial';
+  label.textContent = ready.length + ' of ' + reqIds.length + ' required sources attached';
+  btn.disabled = true;
+
+  const consequences = [];
+  if (!has('scope'))    consequences.push('sections 01–11 will be generic or empty');
+  if (!has('da'))       consequences.push("cover language and exclusions won't reflect the signed DA");
+  if (!has('plans'))    consequences.push('drawing-specific details will be missing');
+  if (!has('sel'))      consequences.push('no material names or allowance amounts in Section 13');
+  if (!has('estimate')) consequences.push('comp projects cannot be identified and contract value cannot be confirmed');
+
+  msg.innerHTML =
+    '<strong>' + ready.map(id => chipLabels[id]).join(', ') + '</strong> received. ' +
+    'Still missing: <strong>' + missing.map(id => chipLabels[id]).join(', ') + '</strong>. ' +
+    'Without ' + (missing.length === 1 ? 'it' : 'them') + ': ' + consequences.join('; ') + '.';
+
+  hint.textContent = missing.length + ' required source' + (missing.length > 1 ? 's' : '') + ' still needed.';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CRIT NOTES
+// ═══════════════════════════════════════════════════════════════
+function updateCrit() {
+  const ta = document.getElementById('crit-text');
+  const card = document.getElementById('card-crit');
+  const badge = document.getElementById('badge-crit');
+  const has = ta.value.trim().length > 0;
+  card.classList.toggle('has-content', has);
+  if (has) {
+    badge.textContent = 'Ready';
+    badge.className = 'section-status ready';
+  } else {
+    badge.textContent = 'Optional';
+    badge.className = 'section-status';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOGGLE ALL (single button, state-aware)
+// ═══════════════════════════════════════════════════════════════
+function toggleAll() {
+  const sections = document.querySelectorAll('details.section');
+  const anyClosed = Array.from(sections).some(d => !d.open);
+  sections.forEach(d => { d.open = anyClosed; });
+  updateToggleLabel();
+}
+
+function updateToggleLabel() {
+  const sections = document.querySelectorAll('details.section');
+  const anyClosed = Array.from(sections).some(d => !d.open);
+  const btn = document.getElementById('toggle-all');
+  if (btn) btn.textContent = anyClosed ? 'Expand all' : 'Collapse all';
+}
+
+// Watch for individual toggle changes to keep the label accurate
+document.querySelectorAll('details.section').forEach(d => {
+  d.addEventListener('toggle', updateToggleLabel);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+renderComps();
+updateReadiness();
+updateToggleLabel();
+
+try {
+  const saved = sessionStorage.getItem('ca_crit_notes') || '';
+  if (saved) {
+    document.getElementById('crit-text').value = saved;
+    updateCrit();
+  }
+} catch (e) { /* sessionStorage unavailable */ }
+</script>
+</body>
+</html>
